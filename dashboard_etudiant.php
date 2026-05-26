@@ -38,11 +38,14 @@ if ($nombre_notes > 0) {
         </div>
     </header>
 
-    <nav class="top-nav">
-        <a href="dashboard_etudiant.php" class="active">Tableau de bord</a>
-        <a href="parametres.php">Paramètres</a>
-        <a href="deconnexion.php">Déconnexion</a>
-    </nav>
+<nav class="top-nav">
+    <a href="dashboard_etudiant.php" class="<?= (basename($_SERVER['PHP_SELF']) == 'dashboard_etudiant.php') ? 'active' : '' ?>">Dashboard</a>
+    <a href="profil.php" class="<?= (basename($_SERVER['PHP_SELF']) == 'profil.php') ? 'active' : '' ?>">Profil</a>
+    <a href="mes_cours.php" class="<?= (basename($_SERVER['PHP_SELF']) == 'mes_cours.php') ? 'active' : '' ?>">Mes Cours</a>
+    <a href="mes_notes.php" class="<?= (basename($_SERVER['PHP_SELF']) == 'mes_notes.php') ? 'active' : '' ?>">Notes</a>
+    <a href="presences.php" class="<?= (basename($_SERVER['PHP_SELF']) == 'presences.php') ? 'active' : '' ?>">Présences</a>
+    <a href="planning.php" class="<?= (basename($_SERVER['PHP_SELF']) == 'planning.php') ? 'active' : '' ?>">Emploi du temps</a>
+</nav>
 
     <div class="container">
         <div style="margin-bottom: 40px; display: flex; justify-content: space-between; align-items: center;">
