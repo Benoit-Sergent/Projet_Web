@@ -1,7 +1,1 @@
-# Ignore les fichiers de base de données
-*.db
-*.sqlite
-# Ignore la configuration locale
-config.php
-# Ignore les dossiers d'installation Wamp/XAMPP
-.vscode/
+/database/*.db
