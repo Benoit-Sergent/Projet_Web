@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Memento Git - SmartCampus</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; background-color: #f0f2f5; padding: 40px 20px; }
+        .container { max-width: 850px; margin: auto; background: #ffffff; padding: 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h1 { color: #1a5276; border-bottom: 3px solid #3498db; padding-bottom: 10px; margin-top: 0; }
+        h2 { color: #2874a6; margin-top: 30px; background: #ebf5fb; padding: 10px; border-left: 5px solid #2874a6; border-radius: 0 5px 5px 0; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #e5e8e8; }
+        th { background-color: #f8f9f9; color: #1c2833; }
+        code { background-color: #f4f6f7; padding: 2px 6px; border-radius: 4px; font-family: 'Consolas', monospace; color: #c0392b; font-weight: bold; }
+        pre { background-color: #2c3e50; color: #ecf0f1; padding: 20px; border-radius: 8px; overflow-x: auto; }
+        .note { background: #fff3cd; padding: 15px; border-radius: 6px; border-left: 5px solid #ffc107; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Memento Git : Projet SmartCampus</h1>
+        <p>Utilisez ce guide pour maintenir une <strong>progression GitHub rigoureuse</strong>, un critère clé pour votre évaluation.</p>
+
+        <h2>Workflow Quotidien</h2>
+        <table>
+            <tr><th>Action</th><th>Commande</th></tr>
+            <tr><td>Mise à jour (avant travail)</td><td><code>git pull origin main</code></td></tr>
+            <tr><td>Préparation des fichiers</td><td><code>git add .</code></td></tr>
+            <tr><td>Sauvegarde locale</td><td><code>git commit -m "feat: description claire"</code></td></tr>
+            <tr><td>Envoi sur GitHub</td><td><code>git push origin main</code></td></tr>
+        </table>
+
+        <h2>Gestion Avancée</h2>
+        <div class="note">
+            <strong>Conseil :</strong> Pour éviter les conflits, travaillez sur des branches dédiées : <code>git checkout -b feature/nom-fonctionnalité</code>.
+        </div>
+
+        <h2>Structure du .gitignore</h2>
+        <p>Ne poussez jamais les dossiers de dépendances ou fichiers de configuration locaux !</p>
+        <pre>
+# Fichiers à ignorer
+node_modules/
+.env
+*.log
+dist/
+build/</pre>
+    </div>
+</body>
+</html>
