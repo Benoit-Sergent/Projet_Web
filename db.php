@@ -104,4 +104,3 @@ try {
     die("Erreur critique de connexion : " . $e->getMessage());
 }
 ?>
-?>
