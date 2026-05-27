@@ -88,11 +88,12 @@ $jours_label = [1 => 'Lundi', 2 => 'Mardi', 3 => 'Mercredi', 4 => 'Jeudi', 5 => 
         </div>
     </header>
 
-    <nav class="top-nav">
-        <a href="dashboard_administrateur.php">Membres & Classes</a>
-        <a href="gestion_cours.php" class="active">Programme</a>
+<nav class="top-nav">
+        <a href="dashboard_administrateur.php" <?= basename($_SERVER['PHP_SELF']) == 'dashboard_administrateur.php' ? 'class="active"' : '' ?>>Membres & Classes</a>
+        <a href="gestion_cours.php" <?= basename($_SERVER['PHP_SELF']) == 'gestion_cours.php' ? 'class="active"' : '' ?>>Programme</a>
+        <a href="gestion_absences.php" <?= basename($_SERVER['PHP_SELF']) == 'gestion_absences.php' ? 'class="active"' : '' ?>>Scolarité (Absences)</a>
         <a href="parametres.php">Paramètres</a>
-        <a href="deconnexion.php" style="color: var(--danger);">Déconnexion</a>
+        <a href="deconnexion.php" style="color:var(--danger);">Déconnexion</a>
     </nav>
 
     <div class="container">

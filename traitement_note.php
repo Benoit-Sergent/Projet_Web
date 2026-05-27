@@ -1,30 +1,25 @@
 <?php
 session_start();
-if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'professeur') {
-    header("Location: connexion.php");
-    exit();
-}
-
 require_once 'db.php';
 
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $etudiant_id = $_POST['etudiant_id'];
-    $cours_id = $_POST['cours_id'];
-    $valeur_note = $_POST['valeur_note'];
-    // On récupère le commentaire (qui peut être vide)
+if ($_SERVER["REQUEST_METHOD"] == "POST" && $_SESSION['role'] === 'professeur') {
+    $etudiant_id = intval($_POST['etudiant_id']);
+    $cours_id = intval($_POST['cours_id']);
+    $valeur_note = floatval($_POST['valeur_note']);
     $commentaire = trim($_POST['commentaire']);
 
-    $stmt = $db->prepare("INSERT INTO notes (etudiant_id, cours_id, valeur_note, commentaire) VALUES (?, ?, ?, ?)");
-    
-    if ($stmt->execute([$etudiant_id, $cours_id, $valeur_note, $commentaire])) {
-        // Redirection invisible vers le dashboard après succès
-        header("Location: dashboard_professeur.php");
+    // Sécurité basique : la note doit être entre 0 et 20
+    if ($valeur_note >= 0 && $valeur_note <= 20) {
+        $stmt = $db->prepare("INSERT INTO notes (etudiant_id, cours_id, valeur_note, commentaire) VALUES (?, ?, ?, ?)");
+        $stmt->execute([$etudiant_id, $cours_id, $valeur_note, $commentaire]);
+        
+        // Redirection avec un message de succès
+        header("Location: dashboard_professeur.php?succes=1");
         exit();
-    } else {
-        echo "⚠️ Erreur lors de l'enregistrement.";
     }
-} else {
-    header("Location: dashboard_professeur.php");
-    exit();
 }
+
+// En cas d'erreur ou d'accès direct, on redirige normalement
+header("Location: dashboard_professeur.php");
+exit();
 ?>
