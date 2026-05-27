@@ -1,11 +1,16 @@
 <?php
-// On utilise DIRECTORY_SEPARATOR pour être compatible avec Windows
-$db_file = __DIR__ . DIRECTORY_SEPARATOR . 'database' . DIRECTORY_SEPARATOR . 'smartcampus.db';
+// db.php
+$db_dir = __DIR__ . DIRECTORY_SEPARATOR . 'database';
+$db_file = $db_dir . DIRECTORY_SEPARATOR . 'smartcampus.db';
+
+// Création du dossier database s'il n'existe pas
+if (!is_dir($db_dir)) {
+    mkdir($db_dir, 0777, true);
+}
 
 try {
     $db = new PDO("sqlite:" . $db_file);
     $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    // Retourne les résultats sous forme de tableau associatif par défaut pour simplifier le code
     $db->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
     $db->exec('PRAGMA foreign_keys = ON;');
 
@@ -15,7 +20,7 @@ try {
         nom TEXT NOT NULL UNIQUE
     )");
 
-    // 2. Table Utilisateurs (Ajout du groupe_id et du statut)
+    // 2. Table Utilisateurs
     $db->exec("CREATE TABLE IF NOT EXISTS utilisateurs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         prenom TEXT NOT NULL,
@@ -28,7 +33,7 @@ try {
         FOREIGN KEY(groupe_id) REFERENCES groupes(id) ON DELETE SET NULL
     )");
 
-    // 3. Table Cours (Ajout du groupe_id et professeur_id)
+    // 3. Table Cours
     $db->exec("CREATE TABLE IF NOT EXISTS cours (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         titre TEXT NOT NULL,
@@ -40,7 +45,7 @@ try {
         FOREIGN KEY(professeur_id) REFERENCES utilisateurs(id) ON DELETE SET NULL
     )");
 
-    // 4. Table Créneaux Horaires (Pour le planning)
+    // 4. Table Créneaux Horaires (Planning)
     $db->exec("CREATE TABLE IF NOT EXISTS cours_creneaux (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         cours_id INTEGER NOT NULL,
@@ -56,13 +61,13 @@ try {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         etudiant_id INTEGER,
         cours_id INTEGER,
-        valeur_note REAL,
+        valeur_note REAL CHECK(valeur_note >= 0 AND valeur_note <= 20),
         commentaire TEXT,
         FOREIGN KEY(etudiant_id) REFERENCES utilisateurs(id) ON DELETE CASCADE,
         FOREIGN KEY(cours_id) REFERENCES cours(id) ON DELETE CASCADE
     )");
 
-    // 6. Table Présences
+    // 6. Table Présences (Absences / Retards)
     $db->exec("CREATE TABLE IF NOT EXISTS presences (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         etudiant_id INTEGER,
@@ -74,7 +79,20 @@ try {
         FOREIGN KEY(cours_id) REFERENCES cours(id) ON DELETE CASCADE
     )");
 
-    // 7. Auto-création de l'administrateur par défaut si la table est vide
+    // 7. Table Messagerie
+    $db->exec("CREATE TABLE IF NOT EXISTS messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        expediteur_id INTEGER NOT NULL,
+        destinataire_id INTEGER NOT NULL,
+        sujet TEXT NOT NULL,
+        contenu TEXT NOT NULL,
+        date_envoi DATETIME DEFAULT CURRENT_TIMESTAMP,
+        lu INTEGER DEFAULT 0,
+        FOREIGN KEY(expediteur_id) REFERENCES utilisateurs(id) ON DELETE CASCADE,
+        FOREIGN KEY(destinataire_id) REFERENCES utilisateurs(id) ON DELETE CASCADE
+    )");
+
+    // Auto-création de l'admin par défaut si la table est vide
     $stmt = $db->query("SELECT COUNT(*) FROM utilisateurs WHERE role = 'administrateur'");
     if ($stmt->fetchColumn() == 0) {
         $hash = password_hash('admin123', PASSWORD_DEFAULT);
@@ -83,6 +101,7 @@ try {
     }
 
 } catch (PDOException $e) {
-    die("Erreur de connexion : " . $e->getMessage());
+    die("Erreur critique de connexion : " . $e->getMessage());
 }
+?>
 ?>

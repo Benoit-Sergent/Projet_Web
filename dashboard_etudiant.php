@@ -3,91 +3,82 @@ session_start();
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'etudiant') { header("Location: connexion.php"); exit(); }
 require_once 'db.php';
 
-$stmt_user = $db->prepare("SELECT prenom, nom, email FROM utilisateurs WHERE id = ?");
-$stmt_user->execute([$_SESSION['utilisateur_id']]);
-$user = $stmt_user->fetch(PDO::FETCH_ASSOC);
+$etud_id = $_SESSION['utilisateur_id'];
+
+$stmt_unread = $db->prepare("SELECT COUNT(*) FROM messages WHERE destinataire_id = ? AND lu = 0");
+$stmt_unread->execute([$etud_id]);
+$messages_non_lus = $stmt_unread->fetchColumn();
+
+// Informations de l'élève et sa classe
+$user = $db->query("SELECT u.*, g.nom as nom_groupe FROM utilisateurs u LEFT JOIN groupes g ON u.groupe_id = g.id WHERE u.id = $etud_id")->fetch();
 $initiales = strtoupper(substr($user['prenom'], 0, 1) . substr($user['nom'], 0, 1));
 
-$liste_cours = $db->query("SELECT * FROM cours ORDER BY categorie, titre")->fetchAll(PDO::FETCH_ASSOC);
-
-$stmt_notes = $db->prepare("SELECT cours.titre, notes.valeur_note, notes.commentaire FROM notes JOIN cours ON notes.cours_id = cours.id WHERE notes.etudiant_id = ?");
-$stmt_notes->execute([$_SESSION['utilisateur_id']]);
-$mes_notes = $stmt_notes->fetchAll(PDO::FETCH_ASSOC);
-
-$moyenne_generale = 0; $nombre_notes = count($mes_notes);
-if ($nombre_notes > 0) {
-    $moyenne_generale = round(array_sum(array_column($mes_notes, 'valeur_note')) / $nombre_notes, 2);
+// Liste des cours
+$liste_cours = [];
+if ($user['groupe_id']) {
+    $stmt = $db->prepare("SELECT * FROM cours WHERE groupe_id = ? ORDER BY titre");
+    $stmt->execute([$user['groupe_id']]);
+    $liste_cours = $stmt->fetchAll();
 }
+
+// Moyenne générale
+$stmt_notes = $db->prepare("SELECT valeur_note FROM notes WHERE etudiant_id = ?");
+$stmt_notes->execute([$etud_id]);
+$notes = $stmt_notes->fetchAll();
+$moyenne = 0;
+if (count($notes) > 0) {
+    $moyenne = round(array_sum(array_column($notes, 'valeur_note')) / count($notes), 2);
+}
+
+// Absences et retards
+$stmt_abs = $db->prepare("SELECT COUNT(*) FROM presences WHERE etudiant_id = ? AND statut = 'absent'");
+$stmt_abs->execute([$etud_id]);
+$nb_abs = $stmt_abs->fetchColumn();
 ?>
 <!DOCTYPE html>
 <html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <title>Mon Espace - SmartCampus</title>
-    <link rel="stylesheet" href="style.css">
-</head>
+<head><meta charset="UTF-8"><title>Étudiant - SmartCampus</title><link rel="stylesheet" href="style.css"></head>
 <body>
     <header class="top-bar">
-        <img src="images/logo.jpg" alt="Logo HEJ">
+        <img src="images/logo.jpg" alt="Logo" onerror="this.src='https://via.placeholder.com/120x45?text=SmartCampus'">
         <div class="user-widget">
-            <div class="user-widget-info" style="text-align: right;">
-                <strong><?= htmlspecialchars($user['prenom'] . ' ' . $user['nom']) ?></strong>
-                <span>Étudiant</span>
-            </div>
+            <div class="user-widget-info" style="text-align: right;"><strong><?= htmlspecialchars($user['prenom'].' '.$user['nom']) ?></strong><span><?= $user['nom_groupe'] ? htmlspecialchars($user['nom_groupe']) : 'Classe non assignée' ?></span></div>
             <div class="avatar-small"><?= $initiales ?></div>
         </div>
     </header>
 
-<nav class="top-nav">
-    <a href="dashboard_etudiant.php" class="<?= (basename($_SERVER['PHP_SELF']) == 'dashboard_etudiant.php') ? 'active' : '' ?>">Dashboard</a>
-    <a href="profil.php" class="<?= (basename($_SERVER['PHP_SELF']) == 'profil.php') ? 'active' : '' ?>">Profil</a>
-    <a href="mes_cours.php" class="<?= (basename($_SERVER['PHP_SELF']) == 'mes_cours.php') ? 'active' : '' ?>">Mes Cours</a>
-    <a href="mes_notes.php" class="<?= (basename($_SERVER['PHP_SELF']) == 'mes_notes.php') ? 'active' : '' ?>">Notes</a>
-    <a href="presences.php" class="<?= (basename($_SERVER['PHP_SELF']) == 'presences.php') ? 'active' : '' ?>">Présences</a>
-    <a href="planning.php" class="<?= (basename($_SERVER['PHP_SELF']) == 'planning.php') ? 'active' : '' ?>">Emploi du temps</a>
-</nav>
+    <nav class="top-nav">
+        <a href="dashboard_etudiant.php" class="active">Dashboard</a>
+        <a href="mes_cours.php">Mes Cours</a>
+        <a href="mes_notes.php">Notes</a>
+        <a href="presences.php">Présences</a>
+        <a href="planning.php">Emploi du temps</a>
+        <a href="messagerie.php">Messagerie 💬<?php if ($messages_non_lus > 0): ?><span class="notification-badge"><?= $messages_non_lus ?></span><?php endif; ?></a>
+        <a href="profil.php">Profil</a>
+        <a href="deconnexion.php" style="color:var(--danger);">Déconnexion</a>
+    </nav>
 
     <div class="container">
-        <div style="margin-bottom: 40px; display: flex; justify-content: space-between; align-items: center;">
-            <div>
-                <h1 style="margin:0; color:var(--primary);">Mon Parcours Académique</h1>
-                <p style="margin:5px 0 0 0; color:var(--text-muted);">Suivez vos évaluations en temps réel.</p>
+        <h1>Mon Espace Étudiant</h1>
+        <div class="dashboard-grid">
+            <div class="card" style="text-align:center;padding:30px;">
+                <h2 style="color:var(--text-muted);font-size:14px;text-transform:uppercase;">Moyenne Générale</h2>
+                <div style="font-size:48px;font-weight:bold;color:var(--primary);margin:15px 0;"><?= $moyenne ?> <span style="font-size:18px;color:var(--text-muted);">/ 20</span></div>
             </div>
-            <div class="card" style="padding: 15px 35px; text-align: center;">
-                <span style="font-size:12px; color:var(--text-muted); text-transform:uppercase;">Moyenne Générale</span>
-                <strong style="display:block; font-size:26px; color:var(--primary); margin-top:2px;"><?= $nombre_notes > 0 ? number_format($moyenne_generale, 2, ',', ' ') : '-' ?> <span style="font-size:14px;color:var(--text-muted)">/20</span></strong>
+
+            <div class="card" style="text-align:center;padding:30px;">
+                <h2 style="color:var(--text-muted);font-size:14px;text-transform:uppercase;">Absences Signalées</h2>
+                <div style="font-size:48px;font-weight:bold;color:var(--danger);margin:15px 0;"><?= $nb_abs ?></div>
             </div>
         </div>
 
-        <div class="dashboard-grid">
-            <div class="card">
-                <div class="card-header"><h2>Carnet de Notes</h2></div>
-                <?php if (empty($mes_notes)): ?>
-                    <p style="color: var(--text-muted); font-style: italic;">Aucune note enregistrée pour le moment.</p>
-                <?php else: ?>
-                    <table>
-                        <tr><th>Matière</th><th>Note</th><th>Appréciation</th></tr>
-                        <?php foreach ($mes_notes as $note): 
-                            $badge = ($note['valeur_note'] >= 10) ? 'badge-success' : 'badge-danger';
-                        ?>
-                            <tr>
-                                <td><strong><?= htmlspecialchars($note['titre']) ?></strong></td>
-                                <td><span class="badge <?= $badge ?>"><?= htmlspecialchars($note['valeur_note']) ?> / 20</span></td>
-                                <td style="color: var(--text-muted); font-style: italic;"><?= !empty($note['commentaire']) ? htmlspecialchars($note['commentaire']) : 'Aucune mention' ?></td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </table>
-                <?php endif; ?>
-            </div>
-
-            <div class="card">
-                <div class="card-header"><h2>Matières Enseignées</h2></div>
-                <table style="width:100%">
-                    <?php foreach ($liste_cours as $cours): ?>
-                        <tr><td>📘 <strong><?= htmlspecialchars($cours['titre']) ?></strong><br><span style="font-size:12px;color:var(--text-muted)"><?= htmlspecialchars($cours['categorie']) ?></span></td></tr>
-                    <?php endforeach; ?>
-                </table>
-            </div>
+        <div class="card" style="margin-top:25px;">
+            <div class="card-header"><h2>Mes Matières Actuelles</h2></div>
+            <table>
+                <?php foreach($liste_cours as $c): ?>
+                    <tr><td>📘 <strong><?= htmlspecialchars($c['titre']) ?></strong> (<?= htmlspecialchars($c['categorie']) ?>)</td></tr>
+                <?php endforeach; if(empty($liste_cours)) echo "<tr><td>Aucun cours assigné.</td></tr>"; ?>
+            </table>
         </div>
     </div>
 </body>
