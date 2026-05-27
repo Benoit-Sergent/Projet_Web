@@ -39,7 +39,14 @@ $absences = $db->query("
 
     <div class="container" style="margin-top:30px;">
         <h1>Suivi Scolarité & Absences</h1>
-        <div class="card">
+<div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="margin: 0;">Tous les signalements</h2>
+                <a href="export_absences.php" class="btn-action" style="background-color: var(--success); text-decoration: none;">
+                    📥 Exporter en CSV (Excel)
+                </a>
+            </div>
+            
             <table>
                 <tr><th>Date</th><th>Étudiant</th><th>Classe</th><th>Cours</th><th>Statut</th><th>Arbitrage Administratif</th></tr>
                 <?php foreach($absences as $a): ?>
