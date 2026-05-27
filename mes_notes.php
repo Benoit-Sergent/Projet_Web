@@ -156,5 +156,6 @@ if ($nombre_notes > 0) {
             <?php endif; ?>
         </div>
     </div>
+<?php include 'footer.php'; ?>
 </body>
 </html>

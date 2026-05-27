@@ -353,5 +353,6 @@ $nb_abs = $stmt_abs->fetchColumn();
             </div>
         </div>
     </div>
+	<?php include 'footer.php'; ?>
 </body>
 </html>

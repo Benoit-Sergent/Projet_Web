@@ -203,5 +203,6 @@ $tous_les_cours = $stmt_plan->fetchAll(PDO::FETCH_ASSOC);
             });
         }
     </script>
+<?php include 'footer.php'; ?>
 </body>
 </html>

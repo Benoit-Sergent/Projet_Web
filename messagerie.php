@@ -78,5 +78,6 @@ $retour_dash = "dashboard_" . $mon_role . ".php";
             </div>
         </div>
     </div>
+<?php include 'footer.php'; ?>
 </body>
 </html>

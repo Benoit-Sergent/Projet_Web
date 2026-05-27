@@ -376,5 +376,6 @@ if ($nb_notes_donnees > 0) {
             es.selectedIndex = 0;
         }
     </script>
+<?php include 'footer.php'; ?>
 </body>
 </html>

@@ -161,5 +161,6 @@ $stmt_unread->execute([$mon_id]); $messages_non_lus = $stmt_unread->fetchColumn(
             </div>
         </div>
     </div>
+<?php include 'footer.php'; ?>
 </body>
 </html>

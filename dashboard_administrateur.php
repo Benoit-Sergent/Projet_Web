@@ -228,5 +228,6 @@ $nb_classes = count($groupes);
         }
         window.onload = toggleGroupSelect;
     </script>
+<?php include 'footer.php'; ?>
 </body>
 </html>

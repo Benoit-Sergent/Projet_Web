@@ -84,5 +84,6 @@ if ($user['groupe_id']) {
             </div>
         <?php endif; ?>
     </div>
+<?php include 'footer.php'; ?>
 </body>
 </html>

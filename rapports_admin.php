@@ -183,5 +183,6 @@ foreach ($absences as $row) {
             }
         });
     </script>
+<?php include 'footer.php'; ?>
 </body>
 </html>
