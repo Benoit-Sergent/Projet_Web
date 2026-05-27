@@ -1,22 +1,16 @@
 <?php
 session_start();
-if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'administrateur') { header("Location: connexion.php"); exit(); }
+if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'administrateur') { 
+    header("Location: connexion.php"); 
+    exit(); 
+}
 require_once 'db.php';
-
-$admin_id = $_SESSION['utilisateur_id'];
-$admin_info = $db->query("SELECT prenom, nom FROM utilisateurs WHERE id = $admin_id")->fetch();
-$initiales = strtoupper(substr($admin_info['prenom'], 0, 1) . substr($admin_info['nom'], 0, 1));
-
-// Compter les messages non lus pour le menu
-$stmt_unread = $db->prepare("SELECT COUNT(*) FROM messages WHERE destinataire_id = ? AND lu = 0");
-$stmt_unread->execute([$admin_id]);
-$messages_non_lus = $stmt_unread->fetchColumn();
 
 // ==========================================
 // PRÉPARATION DES DONNÉES POUR LES GRAPHIQUES
 // ==========================================
 
-// 1. Répartition des étudiants par classe (Graphique en Camembert)
+// 1. Répartition des étudiants par classe
 $repartition = $db->query("
     SELECT g.nom, COUNT(u.id) as nb_etudiants 
     FROM groupes g 
@@ -30,7 +24,7 @@ foreach ($repartition as $row) {
     $data_classes[] = $row['nb_etudiants'];
 }
 
-// 2. Moyenne générale par cours (Graphique en Barres)
+// 2. Moyenne générale par cours
 $moyennes = $db->query("
     SELECT c.titre, ROUND(AVG(n.valeur_note), 2) as moyenne 
     FROM cours c 
@@ -44,7 +38,7 @@ foreach ($moyennes as $row) {
     $data_moyennes[] = $row['moyenne'];
 }
 
-// 3. Taux d'absentéisme par matière (Graphique en Ligne/Aire)
+// 3. Taux d'absentéisme par matière
 $absences = $db->query("
     SELECT c.titre, COUNT(p.id) as nb_absences 
     FROM cours c 
@@ -66,39 +60,13 @@ foreach ($absences as $row) {
     <title>Rapports - SmartCampus</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<style>
-        /* On force les cartes de la grille à ne pas s'étendre à l'infini */
-        .dashboard-grid .card { 
-            min-width: 0; 
-            overflow: hidden; 
-        }
-        
-        /* Conteneur strict pour Chart.js */
-        .chart-container { 
-            position: relative; 
-            height: 300px; 
-            width: 100%; 
-        }
+    <style>
+        .dashboard-grid .card { min-width: 0; overflow: hidden; }
+        .chart-container { position: relative; height: 300px; width: 100%; }
     </style>
 </head>
 <body>
-    <header class="top-bar">
-        <img src="images/logo.jpg" alt="Logo" onerror="this.src='https://via.placeholder.com/120x45?text=SmartCampus'">
-        <div class="user-widget">
-            <div class="user-widget-info" style="text-align: right;"><strong><?= htmlspecialchars($admin_info['prenom'].' '.$admin_info['nom']) ?></strong><span>Administrateur</span></div>
-            <div class="avatar-small" style="background:#2b2b2b;"><?= $initiales ?></div>
-        </div>
-    </header>
-
-    <nav class="top-nav">
-        <a href="dashboard_administrateur.php">Membres & Classes</a>
-        <a href="gestion_cours.php">Programme</a>
-        <a href="gestion_absences.php">Scolarité (Absences)</a>
-        <a href="rapports_admin.php" class="active">📊 Rapports</a>
-        <a href="messagerie.php">Messagerie 💬<?php if ($messages_non_lus > 0): ?><span class="notification-badge"><?= $messages_non_lus ?></span><?php endif; ?></a>
-        <a href="profil.php">Profil</a>
-        <a href="deconnexion.php" style="color:var(--danger);">Déconnexion</a>
-    </nav>
+    <?php include 'menu.php'; ?>
 
     <div class="container" style="margin-top:30px;">
         <div style="margin-bottom: 30px;">
@@ -131,7 +99,7 @@ foreach ($absences as $row) {
     </div>
 
     <script>
-        // 1. Graphique des Classes (Doughnut)
+        // Graphique Classes
         new Chart(document.getElementById('chartClasses'), {
             type: 'doughnut',
             data: {
@@ -145,7 +113,7 @@ foreach ($absences as $row) {
             options: { responsive: true, maintainAspectRatio: false }
         });
 
-        // 2. Graphique des Absences (PolarArea ou Line)
+        // Graphique Absences
         new Chart(document.getElementById('chartAbsences'), {
             type: 'line',
             data: {
@@ -163,7 +131,7 @@ foreach ($absences as $row) {
             options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
         });
 
-        // 3. Graphique des Moyennes (Bar)
+        // Graphique Moyennes
         new Chart(document.getElementById('chartMoyennes'), {
             type: 'bar',
             data: {
@@ -183,6 +151,7 @@ foreach ($absences as $row) {
             }
         });
     </script>
-<?php include 'footer.php'; ?>
+    
+    <?php include 'footer.php'; ?>
 </body>
 </html>

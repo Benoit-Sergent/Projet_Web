@@ -1,6 +1,9 @@
 <?php
 session_start();
-if (!isset($_SESSION['utilisateur_id'])) { header("Location: connexion.php"); exit(); }
+if (!isset($_SESSION['utilisateur_id'])) { 
+    header("Location: connexion.php"); 
+    exit(); 
+}
 require_once 'db.php';
 
 $mon_id = $_SESSION['utilisateur_id'];
@@ -26,7 +29,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         
         if (in_array($ext, $extensions_valides)) {
             if ($file_size <= 2 * 1024 * 1024) { // Limite 2 Mo
-                // Nettoyer les anciens fichiers pour cet ID
                 foreach (glob($avatar_dir . DIRECTORY_SEPARATOR . "avatar_" . $mon_id . ".*") as $old_file) {
                     unlink($old_file);
                 }
@@ -38,10 +40,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     $message_erreur = "Échec du transfert du fichier.";
                 }
             } else {
-                $message_erreur = "Le fichier dépasse la taille maximale autorisée (2 Mo).";
+                $message_erreur = "Le fichier dépasse 2 Mo.";
             }
         } else {
-            $message_erreur = "Format invalide. Autorisé : JPG, JPEG, PNG.";
+            $message_erreur = "Format invalide (JPG, JPEG, PNG uniquement).";
         }
     } else {
         $message_erreur = "Erreur lors du chargement du fichier.";
@@ -84,59 +86,43 @@ $search_avatar = glob("uploads/avatars/avatar_" . $mon_id . ".*");
 if (!empty($search_avatar)) {
     $avatar_url = $search_avatar[0];
 }
-
-// Compter les messages non lus
-$stmt_unread = $db->prepare("SELECT COUNT(*) FROM messages WHERE destinataire_id = ? AND lu = 0");
-$stmt_unread->execute([$mon_id]); $messages_non_lus = $stmt_unread->fetchColumn();
 ?>
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8"><title>Mon Profil - SmartCampus</title><link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <title>Mon Profil - SmartCampus</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <header class="top-bar">
-        <img src="images/logo.jpg" alt="Logo" onerror="this.src='https://via.placeholder.com/120x45?text=SmartCampus'">
-        <div class="user-widget">
-            <div class="user-widget-info" style="text-align: right;">
-                <strong><?= htmlspecialchars($mon_profil['prenom'] . ' ' . $mon_profil['nom']) ?></strong>
-                <span style="text-transform: capitalize;"><?= $mon_role ?></span>
-            </div>
-            <div class="avatar-small" <?= $mon_role === 'administrateur' ? 'style="background:#2b2b2b;"' : '' ?>>
-                <?php if ($avatar_url): ?><img src="<?= $avatar_url ?>" alt="Profil"><?php else: ?><?= $initiales ?><?php endif; ?>
-            </div>
-        </div>
-    </header>
-
-    <nav class="top-nav">
-        <?php if ($mon_role === 'administrateur'): ?>
-            <a href="dashboard_administrateur.php">Membres & Classes</a><a href="gestion_cours.php">Programme</a><a href="gestion_absences.php">Scolarité (Absences)</a><a href="rapports_admin.php">📊 Rapports</a>
-        <?php elseif ($mon_role === 'professeur'): ?>
-            <a href="dashboard_professeur.php">Évaluations</a><a href="faire_appel.php">Faire l'appel</a>
-        <?php else: ?>
-            <a href="dashboard_etudiant.php">Dashboard</a><a href="mes_cours.php">Mes Cours</a><a href="mes_notes.php">Notes</a><a href="presences.php">Présences</a><a href="planning.php">Emploi du temps</a>
-        <?php endif; ?>
-        <a href="messagerie.php">Messagerie 💬<?php if ($messages_non_lus > 0): ?><span class="notification-badge"><?= $messages_non_lus ?></span><?php endif; ?></a>
-        <a href="profil.php" class="active">Profil</a>
-        <a href="deconnexion.php" style="color:var(--danger);">Déconnexion</a>
-    </nav>
+    <!-- 🟢 Menu centralisé -->
+    <?php include 'menu.php'; ?>
 
     <div class="container">
-        <h1>Paramètres du Compte</h1>
-        <?php if ($message_succes): ?><div class="alert alert-success"><?= $message_succes ?></div><?php endif; ?>
-        <?php if ($message_erreur): ?><div class="alert alert-error"><?= $message_erreur ?></div><?php endif; ?>
+        <div style="margin-bottom: 30px;">
+            <h1 style="color:var(--primary);">Paramètres du Compte</h1>
+            <p style="color:var(--text-muted); margin:0;">Gérez vos informations personnelles et votre sécurité.</p>
+        </div>
+
+        <?php if ($message_succes): ?><div class="alert alert-success"><span>✅ <?= $message_succes ?></span></div><?php endif; ?>
+        <?php if ($message_erreur): ?><div class="alert alert-error"><span>⚠️ <?= $message_erreur ?></span></div><?php endif; ?>
 
         <div class="dashboard-grid" style="grid-template-columns: 1fr 1fr 1fr;">
+            
+            <!-- Dossier Académique -->
             <div class="card">
                 <div class="card-header"><h2>Dossier Académique</h2></div>
                 <div style="margin-bottom:15px;"><span style="font-size:11px;color:var(--text-muted);text-transform:uppercase;">Identité</span><strong style="display:block;"><?= htmlspecialchars($mon_profil['nom'].' '.$mon_profil['prenom']) ?></strong></div>
                 <div style="margin-bottom:15px;"><span style="font-size:11px;color:var(--text-muted);text-transform:uppercase;">Email</span><strong style="display:block;"><?= htmlspecialchars($mon_profil['email']) ?></strong></div>
                 <div style="margin-bottom:15px;"><span style="font-size:11px;color:var(--text-muted);text-transform:uppercase;">Rôle</span><strong style="display:block;text-transform:capitalize;"><?= $mon_role ?></strong></div>
-                <?php if($mon_role === 'etudiant'): ?><div><span style="font-size:11px;color:var(--text-muted);text-transform:uppercase;">Affectation</span><strong style="display:block;color:var(--primary);"><?= $mon_profil['nom_groupe'] ? htmlspecialchars($mon_profil['nom_groupe']):'Aucune' ?></strong></div><?php endif; ?>
+                <?php if($mon_role === 'etudiant'): ?>
+                    <div><span style="font-size:11px;color:var(--text-muted);text-transform:uppercase;">Affectation</span><strong style="display:block;color:var(--primary);"><?= $mon_profil['nom_groupe'] ? htmlspecialchars($mon_profil['nom_groupe']):'Aucune' ?></strong></div>
+                <?php endif; ?>
             </div>
 
+            <!-- Avatar -->
             <div class="card" style="text-align:center;">
-                <div class="card-header"><h2>Photo Institutionnelle</h2></div>
+                <div class="card-header"><h2>Photo de Profil</h2></div>
                 <div style="display:flex;justify-content:center;margin:15px 0;">
                     <div style="width:110px;height:110px;border-radius:50%;background:var(--bg-body);overflow:hidden;border:3px solid var(--primary);display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:bold;color:var(--text-muted);">
                         <?php if($avatar_url): ?><img src="<?= $avatar_url ?>" style="width:100%;height:100%;object-fit:cover;" alt="Avatar"><?php else: ?><?= $initiales ?><?php endif; ?>
@@ -149,6 +135,7 @@ $stmt_unread->execute([$mon_id]); $messages_non_lus = $stmt_unread->fetchColumn(
                 </form>
             </div>
 
+            <!-- Sécurité -->
             <div class="card">
                 <div class="card-header"><h2>Sécurité d'accès</h2></div>
                 <form method="POST">
@@ -161,6 +148,8 @@ $stmt_unread->execute([$mon_id]); $messages_non_lus = $stmt_unread->fetchColumn(
             </div>
         </div>
     </div>
-<?php include 'footer.php'; ?>
+    
+    <!-- 🟢 Footer centralisé -->
+    <?php include 'footer.php'; ?>
 </body>
 </html>

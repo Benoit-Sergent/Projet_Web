@@ -9,14 +9,7 @@ require_once 'db.php';
 $etud_id = $_SESSION['utilisateur_id'];
 
 // ==========================================
-// 1. MESSAGERIE ET NOTIFICATIONS
-// ==========================================
-$stmt_unread = $db->prepare("SELECT COUNT(*) FROM messages WHERE destinataire_id = ? AND lu = 0");
-$stmt_unread->execute([$etud_id]);
-$messages_non_lus = $stmt_unread->fetchColumn();
-
-// ==========================================
-// 2. INFORMATIONS DE L'ÉTUDIANT ET AVATAR
+// 1. INFORMATIONS DE L'ÉTUDIANT
 // ==========================================
 $user = $db->query("
     SELECT u.*, g.nom as nom_groupe 
@@ -25,15 +18,8 @@ $user = $db->query("
     WHERE u.id = $etud_id
 ")->fetch();
 
-$initiales = strtoupper(substr($user['prenom'], 0, 1) . substr($user['nom'], 0, 1));
-$avatar_url = null;
-$search_avatar = glob("uploads/avatars/avatar_" . $etud_id . ".*");
-if (!empty($search_avatar)) { 
-    $avatar_url = $search_avatar[0]; 
-}
-
 // ==========================================
-// 3. TOUS LES COURS DE L'ÉTUDIANT
+// 2. TOUS LES COURS DE L'ÉTUDIANT
 // ==========================================
 $liste_cours = [];
 if ($user['groupe_id']) {
@@ -43,7 +29,7 @@ if ($user['groupe_id']) {
 }
 
 // ==========================================
-// 4. LES 3 PROCHAINS COURS (TIMELINE)
+// 3. LES 3 PROCHAINS COURS (TIMELINE)
 // ==========================================
 $prochains_cours = [];
 if ($user['groupe_id']) {
@@ -52,6 +38,10 @@ if ($user['groupe_id']) {
         FROM cours c 
         LEFT JOIN utilisateurs u ON c.professeur_id = u.id 
         WHERE c.groupe_id = ? 
+        ORDER BY CASE c.jour 
+            WHEN 'Lundi' THEN 1 WHEN 'Mardi' THEN 2 WHEN 'Mercredi' THEN 3 
+            WHEN 'Jeudi' THEN 4 WHEN 'Vendredi' THEN 5 ELSE 6 
+        END, c.heure_debut ASC
         LIMIT 3
     ");
     $stmt_next->execute([$user['groupe_id']]);
@@ -59,7 +49,7 @@ if ($user['groupe_id']) {
 }
 
 // ==========================================
-// 5. MOYENNE GÉNÉRALE
+// 4. MOYENNE GÉNÉRALE
 // ==========================================
 $stmt_notes = $db->prepare("SELECT valeur_note FROM notes WHERE etudiant_id = ?");
 $stmt_notes->execute([$etud_id]);
@@ -70,7 +60,7 @@ if (count($notes) > 0) {
 }
 
 // ==========================================
-// 6. COMPTEUR D'ABSENCES
+// 5. COMPTEUR D'ABSENCES
 // ==========================================
 $stmt_abs = $db->prepare("SELECT COUNT(*) FROM presences WHERE etudiant_id = ? AND statut = 'absent'");
 $stmt_abs->execute([$etud_id]);
@@ -84,159 +74,36 @@ $nb_abs = $stmt_abs->fetchColumn();
     <link rel="stylesheet" href="style.css">
     <style>
         /* Cartes Statistiques */
-        .stat-card { 
-            display: flex; 
-            align-items: center; 
-            padding: 30px; 
-            gap: 25px; 
-        }
-        .stat-icon { 
-            width: 60px; 
-            height: 60px; 
-            border-radius: 16px; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-        }
+        .stat-card { display: flex; align-items: center; padding: 30px; gap: 25px; }
+        .stat-icon { width: 60px; height: 60px; border-radius: 16px; display: flex; align-items: center; justify-content: center; }
         .icon-blue { background: #e0e7ff; color: #4f46e5; }
         .icon-red { background: #fee2e2; color: #ef4444; }
         
-        .stat-info h2 { 
-            font-size: 13px; 
-            color: var(--text-muted); 
-            text-transform: uppercase; 
-            letter-spacing: 0.05em; 
-            margin-bottom: 5px; 
-        }
-        .stat-info .stat-value { 
-            font-size: 42px; 
-            font-weight: 700; 
-            line-height: 1; 
-            color: var(--text-main); 
-        }
-        .stat-info .stat-sub { 
-            font-size: 16px; 
-            color: var(--text-muted); 
-            font-weight: 500; 
-        }
+        .stat-info h2 { font-size: 13px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 5px; }
+        .stat-info .stat-value { font-size: 42px; font-weight: 700; line-height: 1; color: var(--text-main); }
+        .stat-info .stat-sub { font-size: 16px; color: var(--text-muted); font-weight: 500; }
         
         /* Empty States */
-        .empty-state { 
-            text-align: center; 
-            padding: 30px 20px; 
-            color: var(--text-muted); 
-        }
-        .empty-state svg { 
-            width: 44px; 
-            height: 44px; 
-            margin-bottom: 10px; 
-            opacity: 0.4; 
-        }
+        .empty-state { text-align: center; padding: 30px 20px; color: var(--text-muted); }
+        .empty-state svg { width: 44px; height: 44px; margin-bottom: 10px; opacity: 0.4; }
         
         /* TIMELINE DESIGN POUR LES PROCHAINS COURS */
-        .timeline { 
-            position: relative; 
-            padding-left: 24px; 
-            margin-top: 10px; 
-        }
-        .timeline::before { 
-            content: ''; 
-            position: absolute; 
-            left: 7px; 
-            top: 8px; 
-            bottom: 8px; 
-            width: 2px; 
-            background: var(--border); 
-        }
-        .timeline-item { 
-            position: relative; 
-            margin-bottom: 20px; 
-        }
-        .timeline-item:last-child { 
-            margin-bottom: 0; 
-        }
-        .timeline-badge { 
-            position: absolute; 
-            left: -22px; 
-            top: 6px; 
-            width: 8px; 
-            height: 8px; 
-            border-radius: 50%; 
-            background: var(--primary); 
-            border: 2px solid var(--surface); 
-            box-shadow: 0 0 0 3px var(--primary-light); 
-        }
-        .timeline-content { 
-            background: var(--bg-body); 
-            padding: 12px 16px; 
-            border-radius: var(--radius-md); 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-        }
+        .timeline { position: relative; padding-left: 24px; margin-top: 10px; }
+        .timeline::before { content: ''; position: absolute; left: 7px; top: 8px; bottom: 8px; width: 2px; background: var(--border); }
+        .timeline-item { position: relative; margin-bottom: 20px; }
+        .timeline-item:last-child { margin-bottom: 0; }
+        .timeline-badge { position: absolute; left: -22px; top: 6px; width: 8px; height: 8px; border-radius: 50%; background: var(--primary); border: 2px solid var(--surface); box-shadow: 0 0 0 3px var(--primary-light); }
+        .timeline-content { background: var(--bg-body); padding: 12px 16px; border-radius: var(--radius-md); display: flex; justify-content: space-between; align-items: center; }
         
         /* Liste des enseignements */
-        .course-list { 
-            list-style: none; 
-            padding: 0; 
-            margin: 0; 
-        }
-        .course-item { 
-            display: flex; 
-            align-items: center; 
-            padding: 12px 0; 
-            border-bottom: 1px solid var(--border); 
-        }
-        .course-item:last-child { 
-            border-bottom: none; 
-            padding-bottom: 0; 
-        }
-        .course-icon { 
-            width: 36px; 
-            height: 36px; 
-            background: var(--bg-body); 
-            border-radius: 8px; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            margin-right: 15px; 
-            color: var(--primary); 
-        }
+        .course-list { list-style: none; padding: 0; margin: 0; }
+        .course-item { display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); }
+        .course-item:last-child { border-bottom: none; padding-bottom: 0; }
+        .course-icon { width: 36px; height: 36px; background: var(--bg-body); border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-right: 15px; color: var(--primary); }
     </style>
 </head>
 <body>
-    <header class="top-bar">
-        <img src="images/logo.jpg" alt="Logo" onerror="this.src='https://via.placeholder.com/120x45?text=SmartCampus'">
-        <div class="user-widget">
-            <div class="user-widget-info" style="text-align: right;">
-                <strong><?= htmlspecialchars($user['prenom'].' '.$user['nom']) ?></strong>
-                <span><?= $user['nom_groupe'] ? htmlspecialchars($user['nom_groupe']) : 'Non assigné' ?></span>
-            </div>
-            <div class="avatar-small">
-                <?php if ($avatar_url): ?>
-                    <img src="<?= $avatar_url ?>" alt="Profil">
-                <?php else: ?>
-                    <?= $initiales ?>
-                <?php endif; ?>
-            </div>
-        </div>
-    </header>
-
-    <nav class="top-nav">
-        <a href="dashboard_etudiant.php" class="active">Dashboard</a>
-        <a href="mes_cours.php">Mes Cours</a>
-        <a href="mes_notes.php">Notes</a>
-        <a href="presences.php">Présences</a>
-        <a href="planning.php">Emploi du temps</a>
-        <a href="messagerie.php">
-            Messagerie 💬
-            <?php if ($messages_non_lus > 0): ?>
-                <span class="notification-badge"><?= $messages_non_lus ?></span>
-            <?php endif; ?>
-        </a>
-        <a href="profil.php">Profil</a>
-        <a href="deconnexion.php" style="color:var(--danger);">Déconnexion</a>
-    </nav>
+    <?php include 'menu.php'; ?>
 
     <div class="container">
         
@@ -309,10 +176,10 @@ $nb_abs = $stmt_abs->fetchColumn();
                                     </div>
                                     <div style="text-align:right;">
                                         <span class="badge badge-success" style="font-size:11px; padding:3px 8px; font-weight:600; display:block; margin-bottom:4px;">
-                                            Salle A302
+                                            <?= htmlspecialchars($pc['salle'] ?? 'À définir') ?>
                                         </span>
                                         <span style="font-size:11px; font-weight:500; color:var(--primary);">
-                                            Prochainement
+                                            <?= htmlspecialchars($pc['jour'] ?? 'Lundi') ?> à <?= htmlspecialchars(substr($pc['heure_debut'] ?? '08:30', 0, 5)) ?>
                                         </span>
                                     </div>
                                 </div>
@@ -353,6 +220,7 @@ $nb_abs = $stmt_abs->fetchColumn();
             </div>
         </div>
     </div>
-	<?php include 'footer.php'; ?>
+    
+    <?php include 'footer.php'; ?>
 </body>
 </html>

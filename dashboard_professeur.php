@@ -35,18 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 }
 
 // ==========================================
-// 2. INFORMATIONS DU ENSEIGNANT & MESSAGERIE
-// ==========================================
-$prof_info = $db->query("SELECT prenom, nom FROM utilisateurs WHERE id = $prof_id")->fetch();
-$prof_init = strtoupper(substr($prof_info['prenom'], 0, 1) . substr($prof_info['nom'], 0, 1));
-$prof_avatar = glob("uploads/avatars/avatar_" . $prof_id . ".*");
-
-$stmt_unread = $db->prepare("SELECT COUNT(*) FROM messages WHERE destinataire_id = ? AND lu = 0");
-$stmt_unread->execute([$prof_id]); 
-$messages_non_lus = $stmt_unread->fetchColumn();
-
-// ==========================================
-// 3. CHARGEMENT DES DONNÉES DU TABLEAU DE BORD
+// 2. CHARGEMENT DES DONNÉES DU TABLEAU DE BORD
 // ==========================================
 // Liste des cours dispensés par ce professeur
 $mes_cours = $db->query("
@@ -59,12 +48,16 @@ $mes_cours = $db->query("
 
 $nb_cours = count($mes_cours);
 
-// Simulation des 3 prochaines sessions de cours pour l'agenda d'accueil
+// 3 prochaines sessions de cours avec les vrais horaires (tri chronologique)
 $prochains_cours_prof = $db->query("
     SELECT c.*, g.nom as groupe_nom 
     FROM cours c 
     JOIN groupes g ON c.groupe_id = g.id 
     WHERE c.professeur_id = $prof_id 
+    ORDER BY CASE c.jour 
+        WHEN 'Lundi' THEN 1 WHEN 'Mardi' THEN 2 WHEN 'Mercredi' THEN 3 
+        WHEN 'Jeudi' THEN 4 WHEN 'Vendredi' THEN 5 ELSE 6 
+    END, c.heure_debut ASC
     LIMIT 3
 ")->fetchAll();
 
@@ -89,11 +82,6 @@ $historique_notes = $db->query("
 ")->fetchAll();
 
 $nb_notes_donnees = count($historique_notes);
-$moyenne_donnee = 0;
-if ($nb_notes_donnees > 0) {
-    $somme = array_sum(array_column($historique_notes, 'valeur_note'));
-    $moyenne_donnee = round($somme / $nb_notes_donnees, 2);
-}
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -188,36 +176,7 @@ if ($nb_notes_donnees > 0) {
     </style>
 </head>
 <body>
-    <header class="top-bar">
-        <img src="images/logo.jpg" alt="Logo" onerror="this.src='https://via.placeholder.com/120x45?text=SmartCampus'">
-        <div class="user-widget">
-            <div class="user-widget-info" style="text-align: right;">
-                <strong><?= htmlspecialchars($prof_info['prenom'] . ' ' . $prof_info['nom']) ?></strong>
-                <span>Professeur Enseignant</span>
-            </div>
-            <div class="avatar-small">
-                <?php if (!empty($prof_avatar)): ?>
-                    <img src="<?= $prof_avatar[0] ?>" alt="Professeur">
-                <?php else: ?>
-                    <?= $prof_init ?>
-                <?php endif; ?>
-            </div>
-        </div>
-    </header>
-
-    <nav class="top-nav">
-        <a href="dashboard_professeur.php" class="active">Évaluations</a>
-        <a href="faire_appel.php">Faire l'appel</a>
-        <a href="planning.php">Emploi du temps</a>
-        <a href="messagerie.php">
-            Messagerie 💬
-            <?php if ($messages_non_lus > 0): ?>
-                <span class="notification-badge"><?= $messages_non_lus ?></span>
-            <?php endif; ?>
-        </a>
-        <a href="profil.php">Profil</a>
-        <a href="deconnexion.php" style="color:var(--danger);">Déconnexion</a>
-    </nav>
+    <?php include 'menu.php'; ?>
 
     <div class="container">
         <div style="margin-bottom: 30px;">
@@ -255,10 +214,22 @@ if ($nb_notes_donnees > 0) {
                             <div class="timeline-item">
                                 <div class="timeline-badge"></div>
                                 <div class="timeline-content" style="padding:8px 12px;">
-                                    <span style="font-size:13px; font-weight:600;">
-                                        <?= htmlspecialchars($pcp['titre']) ?> (<?= htmlspecialchars($pcp['groupe_nom']) ?>)
-                                    </span>
-                                    <span style="font-size:11px; color:var(--text-muted);">Scolarité</span>
+                                    <div>
+                                        <span style="font-size:13px; font-weight:600; display:block;">
+                                            <?= htmlspecialchars($pcp['titre']) ?> (<?= htmlspecialchars($pcp['groupe_nom']) ?>)
+                                        </span>
+                                        <span style="font-size:11px; color:var(--text-muted);">
+                                            <?= htmlspecialchars($pcp['salle'] ?? 'Salle à définir') ?>
+                                        </span>
+                                    </div>
+                                    <div style="text-align: right;">
+                                        <span class="badge badge-neutral" style="font-size:10px;">
+                                            <?= htmlspecialchars($pcp['jour'] ?? 'Lundi') ?>
+                                        </span><br>
+                                        <span style="font-size:11px; font-weight:600; color:var(--primary);">
+                                            <?= htmlspecialchars(substr($pcp['heure_debut'] ?? '08:30', 0, 5)) ?>
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
                         <?php endforeach; ?>
@@ -350,6 +321,7 @@ if ($nb_notes_donnees > 0) {
     </div>
 
     <script>
+        // Script pour n'afficher que les élèves de la classe sélectionnée
         function filtrerEtudiants() {
             var cs = document.getElementById('coursSelect'); 
             var es = document.getElementById('etudiantSelect');
@@ -376,6 +348,7 @@ if ($nb_notes_donnees > 0) {
             es.selectedIndex = 0;
         }
     </script>
-<?php include 'footer.php'; ?>
+    
+    <?php include 'footer.php'; ?>
 </body>
 </html>
