@@ -48,7 +48,7 @@ if ($mon_role === 'etudiant') {
 } else { 
     // L'administrateur
     $stmt_plan = $db->prepare("
-        SELECT c.*, u.nom as prof_nom, g.nom as classe_nom 
+        SELECT c.*, u.nom as prof_nom, u.prenom as prof_prenom, g.nom as classe_nom
         FROM cours c 
         LEFT JOIN utilisateurs u ON c.professeur_id = u.id 
         JOIN groupes g ON c.groupe_id = g.id
@@ -172,10 +172,13 @@ $tous_les_cours = $stmt_plan->fetchAll(PDO::FETCH_ASSOC);
                         <div>
                             <div class="agenda-meta">
                                 <span>📍 <strong><?= htmlspecialchars($c['salle'] ?? 'Non assignée') ?></strong></span>
-                                <?php if ($mon_role === 'etudiant'): ?>
-                                    <span>👤 Prof: <strong><?= htmlspecialchars($c['prof_nom'] ?? 'Enseignant') ?></strong></span>
-                                <?php else: ?>
+                                <?php if ($mon_role === 'professeur'): ?>
                                     <span>👥 Classe: <strong><?= htmlspecialchars($c['classe_nom'] ?? '-') ?></strong></span>
+                                <?php else: // étudiant et admin ?>
+                                    <span>👤 Prof: <strong><?= htmlspecialchars(trim(($c['prof_prenom'] ?? '') . ' ' . ($c['prof_nom'] ?? 'Enseignant'))) ?></strong></span>
+                                    <?php if ($mon_role === 'administrateur'): ?>
+                                        <span>👥 <strong><?= htmlspecialchars($c['classe_nom'] ?? '-') ?></strong></span>
+                                    <?php endif; ?>
                                 <?php endif; ?>
                             </div>
                         </div>
