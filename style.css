@@ -35,6 +35,25 @@
 }
 
 /* =========================================
+   MODE SOMBRE (Thème Slate foncé)
+   ========================================= */
+[data-theme="dark"] {
+    --bg-body: #0f172a;       /* Slate 900 - Fond principal plus sombre */
+    --surface: #1e293b;       /* Slate 800 - Fond des cartes et menus */
+    
+    --text-main: #f8fafc;     /* Slate 50 - Texte principal (blanc cassé) */
+    --text-muted: #94a3b8;    /* Slate 400 - Texte secondaire */
+    
+    --border: #334155;        /* Slate 700 - Bordures sombres */
+    
+    /* On garde les couleurs de succès/danger/warning telles quelles, 
+       ou on ajuste légèrement leur fond pour qu'elles ressortent mieux */
+    --success-bg: rgba(16, 185, 129, 0.15);
+    --danger-bg: rgba(239, 68, 68, 0.15);
+	--header-bg: rgba(30, 41, 59, 0.85); /* Fond transparent sombre pour le Glassmorphism */
+}
+
+/* =========================================
    2. STYLES DE BASE
    ========================================= */
 body {
@@ -62,7 +81,7 @@ a { text-decoration: none; transition: var(--transition); }
     position: sticky;
     top: 0;
     z-index: 1000;
-    background: rgba(255, 255, 255, 0.85);
+    background: var(--header-bg, rgba(255, 255, 255, 0.85));
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border-bottom: 1px solid var(--border);
