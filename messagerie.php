@@ -1,4 +1,7 @@
+
 <?php
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
 session_start();
 if (!isset($_SESSION['utilisateur_id'])) { 
     header("Location: connexion.php"); 
@@ -13,9 +16,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     if ($_POST['action'] === 'envoyer') {
         $dest = intval($_POST['destinataire_id']);
         $msg = trim($_POST['message']);
+        $sujet = trim($_POST['sujet']);
         if (!empty($msg) && $dest > 0) {
-            $stmt = $db->prepare("INSERT INTO messages (expediteur_id, destinataire_id, contenu) VALUES (?, ?, ?)");
-            $stmt->execute([$mon_id, $dest, $msg]);
+            $stmt = $db->prepare("INSERT INTO messages (expediteur_id, destinataire_id, sujet, contenu) VALUES (?, ?, ?, ?)");
+            $stmt->execute([$mon_id, $dest, $sujet, $msg]);
         }
     } elseif ($_POST['action'] === 'marquer_lu') {
         $stmt = $db->prepare("UPDATE messages SET lu = 1 WHERE destinataire_id = ?");
@@ -71,6 +75,7 @@ $contacts = $db->query("SELECT id, nom, prenom, role FROM utilisateurs WHERE id 
                             <option value="<?= $c['id'] ?>"><?= htmlspecialchars($c['nom'].' '.$c['prenom'].' ('.$c['role'].')') ?></option>
                         <?php endforeach; ?>
                     </select>
+                    <label>Sujet</label><input type="text" name="sujet" required>
                     <label>Message</label>
                     <textarea name="message" rows="4" required></textarea>
                     <button type="submit" class="btn-action" style="width:100%;">Envoyer</button>

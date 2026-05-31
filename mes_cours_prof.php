@@ -348,7 +348,7 @@ $nb_categories = count(array_filter($categories));
                         </div>
 
                         <div class="cours-card-footer">
-                            <a href="detail_cours.php?id=<?= $cours['id'] ?>" class="btn-cours-detail btn-cours-primary">
+                            <a href="cours_detail_prof.php?id=<?= $cours['id'] ?>" class="btn-cours-detail btn-cours-primary">
                                 Voir le détail
                             </a>
                             <a href="faire_appel.php?cours_id=<?= $cours['id'] ?>" class="btn-cours-detail btn-cours-ghost">

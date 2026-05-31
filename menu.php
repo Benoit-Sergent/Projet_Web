@@ -60,7 +60,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
         <a href="gestion_absences.php" class="<?= $current_page === 'gestion_absences.php' ? 'active' : '' ?>">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg> Scolarité
         </a>
-        <a href="gestion_notes.php" class="<?= $current_page === 'gestion_notes.php' ? 'active' : '' ?>">
+        <a href="notes_admin.php" class="<?= $current_page === 'notes_admin.php' ? 'active' : '' ?>">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0120 9.414V19a2 2 0 01-2 2z" />
             </svg> Notes
@@ -111,7 +111,8 @@ $current_page = basename($_SERVER['PHP_SELF']);
     <a href="deconnexion.php" style="color: var(--danger); margin-left: auto;">
         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg> Quitter
     </a>
-	<script>
+</nav>
+<script>
 document.addEventListener('DOMContentLoaded', () => {
     const themeToggleBtn = document.getElementById('theme-toggle');
     const themeIcon = document.getElementById('theme-icon');
@@ -149,4 +150,3 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 </script>
-</nav>

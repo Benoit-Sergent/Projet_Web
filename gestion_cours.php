@@ -40,14 +40,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 . htmlspecialchars($conflit['titre'])
                 . " » de {$hd} à {$hf} ce jour-là.";
         } else {
-            $stmt = $db->prepare("
-                INSERT INTO cours (titre, categorie, professeur_id, groupe_id, jour, heure_debut, heure_fin, salle) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            $stmtConflitProf = $db->prepare("
+                SELECT titre, heure_debut, heure_fin
+                FROM cours
+                WHERE professeur_id = ? AND jour = ?
+                AND ? < heure_fin AND ? > heure_debut
+                LIMIT 1
             ");
-            if ($stmt->execute([$titre, $categorie, $prof_id, $groupe_id, $jour, $heure_debut, $heure_fin, $salle])) {
-                $message_succes = "Le cours a été planifié avec succès.";
-            } else {
-                $message_erreur = "Erreur lors de la création du cours.";
+            $stmtConflitProf->execute([$prof_id, $jour, $heure_debut, $heure_fin]);
+            $conflitProf = $stmtConflitProf->fetch();
+
+            if ($conflitProf) {
+                $hd = substr($conflitProf['heure_debut'], 0, 5);
+                $hf = substr($conflitProf['heure_fin'],   0, 5);
+                $message_erreur = "Conflit professeur : ce professeur enseigne déjà « "
+                    . htmlspecialchars($conflitProf['titre'])
+                    . " » de {$hd} à {$hf} ce jour-là.";
+            } else{
+                $stmt = $db->prepare("
+                    INSERT INTO cours (titre, categorie, professeur_id, groupe_id, jour, heure_debut, heure_fin, salle) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ");
+                if ($stmt->execute([$titre, $categorie, $prof_id, $groupe_id, $jour, $heure_debut, $heure_fin, $salle])) {
+                    $message_succes = "Le cours a été planifié avec succès.";
+                } else {
+                    $message_erreur = "Erreur lors de la création du cours.";
+                }
             }
         }
 
@@ -657,6 +675,7 @@ $cours = $db->query("
     // ── Données existantes pour la vérification côté client ──
     const coursExistants = <?= json_encode(array_map(fn($c) => [
         'groupe_id'   => $c['groupe_id'],
+        'professeur_id'=> $c['professeur_id'],              
         'groupe_nom'  => $c['groupe_nom'],
         'jour'        => $c['jour'],
         'heure_debut' => $c['heure_debut'],
@@ -687,9 +706,20 @@ $cours = $db->query("
             heureFin            >  c.heure_debut.slice(0, 5)
         );
 
+        const conflitProf = profId ? coursExistants.find(c =>
+            String(c.professeur_id) === String(profId) &&
+            c.jour === jour &&
+            heureDebut < c.heure_fin.slice(0, 5) &&
+            heureFin   > c.heure_debut.slice(0, 5)
+        ) : null;
+
         if (conflit) {
             alerte.innerHTML    = `⛔ Conflit : cette classe a déjà <strong>« ${escHtml(conflit.titre)} »</strong>`
                                 + ` de ${conflit.heure_debut.slice(0,5)} à ${conflit.heure_fin.slice(0,5)} ce jour-là.`;
+            alerte.style.display = 'block';
+            btnSubmit.disabled   = true;
+        } else if (conflitProf) {
+            alerte.innerHTML     = `⛔ Conflit prof : ce professeur enseigne déjà <strong>« ${escHtml(conflitProf.titre)} »</strong> ...`;
             alerte.style.display = 'block';
             btnSubmit.disabled   = true;
         } else {
@@ -699,7 +729,7 @@ $cours = $db->query("
     }
 
     // Écouter les 4 champs déclencheurs
-    ['[name="groupe_id"]','[name="jour"]','[name="heure_debut"]','[name="heure_fin"]']
+    ['[name="groupe_id"]','[name="professeur_id"]', '[name="jour"]','[name="heure_debut"]','[name="heure_fin"]']
         .forEach(sel => document.querySelector(sel)
             ?.addEventListener('change', verifierConflitFormulaire));
 
