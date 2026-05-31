@@ -1,4 +1,7 @@
 <?php
+if (isset($_GET['erreur']) && $_GET['erreur'] === 'classe_pleine') {
+    $message_erreur = "Impossible d'inscrire cet étudiant : la classe choisie est complète (35/35).";
+}
 session_start();
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'administrateur') { 
     header("Location: connexion.php"); 
@@ -25,6 +28,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
 // Données pour le dashboard
 $groupes = $db->query("SELECT * FROM groupes ORDER BY nom")->fetchAll();
+// Effectifs par groupe (étudiants uniquement)
+$effectifsRows = $db->query("
+    SELECT groupe_id, COUNT(*) as nb
+    FROM utilisateurs
+    WHERE role = 'etudiant' AND groupe_id IS NOT NULL
+    GROUP BY groupe_id
+")->fetchAll();
+$effectifs = [];
+foreach ($effectifsRows as $row) {
+    $effectifs[(int)$row['groupe_id']] = (int)$row['nb'];
+}
+const MAX_CLASSE = 35;
+
 $utilisateurs = $db->query("SELECT u.*, g.nom as nom_groupe FROM utilisateurs u LEFT JOIN groupes g ON u.groupe_id = g.id ORDER BY u.role, u.nom")->fetchAll();
 
 $nb_etudiants = $db->query("SELECT COUNT(*) FROM utilisateurs WHERE role = 'etudiant'")->fetchColumn();
@@ -254,6 +270,41 @@ $nb_classes = count($groupes);
         .panel-toast.show   { opacity: 1; transform: translateY(0); }
         .panel-toast.success{ background: #065f46; }
         .panel-toast.error  { background: #991b1b; }
+        
+        .email-feedback {
+            font-size: 12px; font-weight: 600;
+            margin-top: 5px; padding: 7px 11px;
+            border-radius: 8px; display: none;
+            align-items: center; gap: 7px;
+        }
+        .email-feedback.libre    { display: flex; background: #d1fae5; color: #065f46; }
+        .email-feedback.pris     { display: flex; background: #fee2e2; color: #991b1b; }
+        .email-feedback.checking { display: flex; background: #f3f4f6; color: #6b7280; }
+
+        input.email-libre { border-color: #10b981 !important; }
+        input.email-pris  { border-color: #ef4444 !important; }
+
+        /* === CAPACITÉ DE CLASSE === */
+        .capacite-info {
+            font-size: 12px; font-weight: 600;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 7px 11px; border-radius: 8px; margin-top: 6px;
+        }
+        .cap-info-libre   { background: #d1fae5; color: #065f46; }
+        .cap-info-presque { background: #fef3c7; color: #92400e; }
+        .cap-info-plein   { background: #fee2e2; color: #991b1b; }
+
+        .capacite-bar-wrap {
+            height: 5px; border-radius: 4px;
+            background: #e5e7eb; overflow: hidden; margin-top: 5px;
+        }
+        .capacite-bar {
+            height: 100%; border-radius: 4px;
+            transition: width 0.35s, background 0.35s;
+        }
+        .cap-libre   { background: #10b981; }
+        .cap-presque { background: #f59e0b; }
+        .cap-plein   { background: #ef4444; }
     </style>
 </head>
 <body>
@@ -308,7 +359,13 @@ $nb_classes = count($groupes);
                             <div style="flex:1;"><label>Prénom</label><input type="text" name="prenom" required></div>
                             <div style="flex:1;"><label>Nom</label><input type="text" name="nom" required></div>
                         </div>
-                        <label>Email institutionnel</label><input type="email" name="email" required placeholder="nom@smartcampus.fr">
+                        <label>Email institutionnel</label>
+                        <input type="email" name="email" id="newUserEmail" required
+                            placeholder="nom@smartcampus.fr"
+                            autocomplete="off"
+                            onblur="verifierEmail(this.value)"
+                            oninput="reinitialiserEmail()">
+                        <div class="email-feedback" id="emailFeedback"></div>
                         <label>Mot de passe provisoire</label><input type="password" name="mot_de_passe" required>
                         <label>Rôle attribué</label>
                         <select name="role" id="roleSelect" required onchange="toggleGroupSelect()">
@@ -318,14 +375,24 @@ $nb_classes = count($groupes);
                         </select>
                         <div id="groupSelectContainer">
                             <label>Affectation (Classe)</label>
-                            <select name="groupe_id" id="groupSelect">
+                            <select name="groupe_id" id="groupSelect" onchange="afficherCapacite(this)">
                                 <option value="">-- Assigner à une classe --</option>
-                                <?php foreach($groupes as $g): ?>
-                                    <option value="<?= $g['id'] ?>"><?= htmlspecialchars($g['nom']) ?></option>
+                                <?php foreach($groupes as $g):
+                                    $nb    = $effectifs[$g['id']] ?? 0;
+                                    $plein = $nb >= MAX_CLASSE;
+                                ?>
+                                    <option value="<?= $g['id'] ?>"
+                                            <?= $plein ? 'disabled' : '' ?>>
+                                        <?= htmlspecialchars($g['nom']) ?> — <?= $nb ?>/35<?= $plein ? ' · Complet' : '' ?>
+                                    </option>
                                 <?php endforeach; ?>
                             </select>
+                            <div id="capaciteIndicateur"></div>
                         </div>
-                        <button type="submit" class="btn-action" style="width:100%; margin-top:10px;">Générer l'accès</button>
+                        <button type="submit" id="btnCreerCompte" class="btn-action"
+                                style="width:100%; margin-top:10px;">
+                            Générer l'accès
+                        </button>
                     </form>
                 </div>
             </div>
@@ -359,8 +426,14 @@ $nb_classes = count($groupes);
                         <!-- Filtre par classe, visible uniquement pour "Étudiants" -->
                         <select id="filtreClasse" class="filtre-select" onchange="appliquerFiltres()">
                             <option value="">— Toutes les classes —</option>
-                            <?php foreach($groupes as $g): ?>
-                                <option value="<?= htmlspecialchars($g['nom']) ?>"><?= htmlspecialchars($g['nom']) ?></option>
+                            <?php foreach($groupes as $g):
+                                $nb    = $effectifs[$g['id']] ?? 0;
+                                $plein = $nb >= MAX_CLASSE;
+                            ?>
+                                <option value="<?= htmlspecialchars($g['nom']) ?>">
+                                    <?= htmlspecialchars($g['nom']) ?>
+                                    (<?= $nb ?>/35<?= $plein ? ' · Complet' : '' ?>)
+                                </option>
                             <?php endforeach; ?>
                         </select>
 
@@ -518,13 +591,85 @@ $nb_classes = count($groupes);
     <div class="panel-toast" id="panelToast"></div>
 
     <script>
+        // Données de capacité injectées depuis PHP
+        const EFFECTIFS  = <?= json_encode($effectifs) ?>;
+        const GROUPES    = <?= json_encode(array_values($groupes)) ?>;
+        const MAX_CLASSE = 35;
+
         /* ---- Formulaire d'inscription ---- */
         function toggleGroupSelect() {
-            var role = document.getElementById('roleSelect').value;
-            document.getElementById('groupSelectContainer').style.display = (role === 'etudiant') ? 'block' : 'none';
+            const role = document.getElementById('roleSelect').value;
+            const show = role === 'etudiant';
+            document.getElementById('groupSelectContainer').style.display = show ? 'block' : 'none';
+            if (!show) document.getElementById('capaciteIndicateur').innerHTML = '';
         }
         window.onload = toggleGroupSelect;
+        
+        /* ======================================================
+        CAPACITÉ DE CLASSE
+        ====================================================== */
 
+        function afficherCapacite(selectEl) {
+            const indicateur = document.getElementById('capaciteIndicateur');
+            const btn        = document.getElementById('btnCreerCompte');
+            const groupeId   = selectEl.value;
+
+            if (!groupeId) {
+                indicateur.innerHTML = '';
+                btn.disabled = false;
+                return;
+            }
+
+            const nb      = EFFECTIFS[groupeId] || 0;
+            const restant = MAX_CLASSE - nb;
+            const pct     = Math.min(Math.round((nb / MAX_CLASSE) * 100), 100);
+            const plein   = nb >= MAX_CLASSE;
+            const presque = nb >= MAX_CLASSE * 0.8; // ≥ 28
+
+            let barClass, infoClass, icone, message;
+            if (plein) {
+                barClass  = 'cap-plein';   infoClass = 'cap-info-plein';
+                icone = '🚫'; message = 'Classe complète — inscription impossible';
+                btn.disabled = true;
+            } else if (presque) {
+                barClass  = 'cap-presque'; infoClass = 'cap-info-presque';
+                icone = '⚠️'; message = `${restant} place${restant > 1 ? 's' : ''} restante${restant > 1 ? 's' : ''}`;
+                btn.disabled = false;
+            } else {
+                barClass  = 'cap-libre';   infoClass = 'cap-info-libre';
+                icone = '✅'; message = `${restant} places disponibles`;
+                btn.disabled = false;
+            }
+
+            indicateur.innerHTML = `
+                <div class="capacite-info ${infoClass}">
+                    <span>${icone} ${message}</span>
+                    <strong>${nb}&thinsp;/&thinsp;${MAX_CLASSE}</strong>
+                </div>
+                <div class="capacite-bar-wrap">
+                    <div class="capacite-bar ${barClass}" style="width:${pct}%"></div>
+                </div>`;
+        }
+
+        /** Reconstruit le select du formulaire avec les effectifs à jour */
+        function rafraichirSelectGroupe() {
+            const sel      = document.getElementById('groupSelect');
+            const valActu  = sel.value;
+            sel.innerHTML  = '<option value="">-- Assigner à une classe --</option>';
+
+            GROUPES.forEach(g => {
+                const nb    = EFFECTIFS[g.id] || 0;
+                const plein = nb >= MAX_CLASSE;
+                const opt   = document.createElement('option');
+                opt.value       = g.id;
+                opt.textContent = `${g.nom} — ${nb}/35${plein ? ' · Complet' : ''}`;
+                opt.disabled    = plein;
+                if (String(g.id) === valActu) opt.selected = true;
+                sel.appendChild(opt);
+            });
+
+            afficherCapacite(sel);
+        }
         /* ======================================================
            FILTRES ANNUAIRE
         ====================================================== */
@@ -650,10 +795,16 @@ $nb_classes = count($groupes);
             const sel = document.getElementById('editGroupe');
             sel.innerHTML = '<option value="">— Sans classe —</option>';
             data.groupes.forEach(g => {
-                const opt = document.createElement('option');
+                const nb             = EFFECTIFS[g.id] || 0;
+                const estClasseActu  = String(g.id) === String(u.groupe_id);
+                // L'étudiant déjà dans cette classe ne "prend" pas une place supplémentaire
+                const plein = !estClasseActu && nb >= MAX_CLASSE;
+
+                const opt       = document.createElement('option');
                 opt.value       = g.id;
-                opt.textContent = g.nom;
-                if (String(g.id) === String(u.groupe_id)) opt.selected = true;
+                opt.textContent = `${g.nom} — ${nb}/35${plein ? ' · Complet' : ''}`;
+                opt.disabled    = plein;
+                if (estClasseActu) opt.selected = true;
                 sel.appendChild(opt);
             });
             
@@ -869,6 +1020,18 @@ $nb_classes = count($groupes);
                 } else {
                     afficherToast('⚠️ ' + (data.error || 'Erreur lors de la mise à jour.'), 'error');
                 }
+                const ancienGroupe  = panelData.user.groupe_id;
+                const nouveauGroupe = payload.groupe_id;
+                const estEtudiant   = payload.role === 'etudiant';
+                const etaitEtudiant = panelData.user.role === 'etudiant';
+
+                if (ancienGroupe !== nouveauGroupe) {
+                    if (etaitEtudiant && ancienGroupe)
+                        EFFECTIFS[ancienGroupe] = Math.max(0, (EFFECTIFS[ancienGroupe] || 0) - 1);
+                    if (estEtudiant && nouveauGroupe)
+                        EFFECTIFS[nouveauGroupe] = (EFFECTIFS[nouveauGroupe] || 0) + 1;
+                    rafraichirSelectGroupe();
+                }
             })
             .catch(() => afficherToast('⚠️ Erreur réseau. Veuillez réessayer.', 'error'))
             .finally(() => {
@@ -924,6 +1087,89 @@ $nb_classes = count($groupes);
         // Fermeture avec la touche Échap
         document.addEventListener('keydown', e => {
             if (e.key === 'Escape') fermerProfil();
+        });
+
+        /* ======================================================
+        VÉRIFICATION D'EMAIL — Ouvrir un Compte
+        ====================================================== */
+
+        let emailCheckTimer = null;
+        let emailEstValide  = true; // autorise la soumission par défaut (champ vide)
+
+        function reinitialiserEmail() {
+            clearTimeout(emailCheckTimer);
+            const input    = document.getElementById('newUserEmail');
+            const feedback = document.getElementById('emailFeedback');
+            input.classList.remove('email-libre', 'email-pris');
+            feedback.className = 'email-feedback';
+            feedback.textContent = '';
+            emailEstValide = true;
+            document.getElementById('btnCreerCompte').disabled = false;
+        }
+
+        function verifierEmail(email) {
+            email = email.trim();
+            if (!email || !email.includes('@')) return;
+
+            const input    = document.getElementById('newUserEmail');
+            const feedback = document.getElementById('emailFeedback');
+            const btn      = document.getElementById('btnCreerCompte');
+
+            // État "vérification en cours"
+            feedback.className   = 'email-feedback checking';
+            feedback.innerHTML   = '<span class="spin-icon">⟳</span> Vérification en cours…';
+            input.classList.remove('email-libre', 'email-pris');
+            btn.disabled = true;
+
+            clearTimeout(emailCheckTimer);
+            emailCheckTimer = setTimeout(() => {
+                fetch(`verifier_email.php?email=${encodeURIComponent(email)}`)
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.existe) {
+                            // Compte déjà existant
+                            emailEstValide = false;
+                            input.classList.add('email-pris');
+                            feedback.className = 'email-feedback pris';
+                            const roleLabel = { etudiant: 'Étudiant', professeur: 'Professeur', administrateur: 'Administrateur' };
+                            feedback.innerHTML =
+                                `⛔ Compte déjà existant : <strong>${escHtml(data.nom)}</strong>
+                                (${roleLabel[data.role] || data.role})`;
+                            btn.disabled = true;
+                        } else {
+                            // Email disponible
+                            emailEstValide = true;
+                            input.classList.add('email-libre');
+                            feedback.className = 'email-feedback libre';
+                            feedback.innerHTML = '✅ Adresse disponible';
+                            btn.disabled = false;
+                        }
+                    })
+                    .catch(() => {
+                        // En cas d'erreur réseau, on laisse passer (le serveur rejettera de toute façon)
+                        emailEstValide = true;
+                        feedback.className = 'email-feedback';
+                        btn.disabled = false;
+                    });
+            }, 400); // petit délai pour éviter les requêtes en rafale
+        }
+
+        /* Bloque la soumission côté client si l'email est déjà pris */
+        document.querySelector('form[action="traitement_inscription.php"]')
+        .addEventListener('submit', function(e) {
+            if (!emailEstValide) {
+                e.preventDefault();
+                afficherToast('⛔ Cet email est déjà associé à un compte existant.', 'error');
+                return;
+            }
+            const role = document.getElementById('roleSelect').value;
+            if (role === 'etudiant') {
+                const sel = document.getElementById('groupSelect');
+                if (sel.value && (EFFECTIFS[sel.value] || 0) >= MAX_CLASSE) {
+                    e.preventDefault();
+                    afficherToast('⛔ Cette classe est complète (35/35).', 'error');
+                }
+            }
         });
     </script>
 

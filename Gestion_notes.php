@@ -17,10 +17,12 @@ $message_erreur = "";
 // Modifier une note
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
-    if ($_POST['action'] === 'modifier_note') {
-        $note_id   = intval($_POST['note_id']);
-        $valeur    = floatval($_POST['valeur_note']);
-        $commentaire = trim($_POST['commentaire']);
+        if ($_POST['action'] === 'modifier_note') {
+            $note_id     = intval($_POST['note_id']);
+            $valeur      = floatval($_POST['valeur_note']);
+            $commentaire = trim($_POST['commentaire']);
+            $type_note   = $_POST['type_note'];
+            $types_autorises = ['DS', 'Partiel', 'Contrôle continu', 'Projet'];
 
         // Vérification que la note appartient bien à un cours de ce prof
         $check = $db->prepare("
@@ -30,10 +32,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         ");
         $check->execute([$note_id, $prof_id]);
 
-        if ($check->fetch()) {
-            if ($valeur >= 0 && $valeur <= 20) {
-                $stmt = $db->prepare("UPDATE notes SET valeur_note = ?, commentaire = ? WHERE id = ?");
-                if ($stmt->execute([$valeur, $commentaire, $note_id])) {
+        if ($row = $check->fetch()) {
+            if (!empty($row['est_validee'])) {
+                $message_erreur = "Cette note a été validée par l'administration et ne peut plus être modifiée.";
+            } elseif ($valeur >= 0 && $valeur <= 20) {
+                $stmt = $db->prepare("UPDATE notes SET valeur_note = ?, commentaire = ?, type_note = ? WHERE id = ?");
+                if ($stmt->execute([$valeur, $commentaire, $type_note, $note_id])) {
                     $message_succes = "Note modifiée avec succès.";
                 } else {
                     $message_erreur = "Erreur lors de la modification.";
@@ -56,9 +60,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         ");
         $check->execute([$note_id, $prof_id]);
 
-        if ($check->fetch()) {
-            $db->prepare("DELETE FROM notes WHERE id = ?")->execute([$note_id]);
-            $message_succes = "Note supprimée avec succès.";
+        if ($row = $check->fetch()) {
+            if (!empty($row['est_validee'])) {
+                $message_erreur = "Cette note a été validée par l'administration et ne peut plus être supprimée.";
+            } else {
+                $db->prepare("DELETE FROM notes WHERE id = ?")->execute([$note_id]);
+                $message_succes = "Note supprimée avec succès.";
+            }
         } else {
             $message_erreur = "Action non autorisée.";
         }
@@ -94,7 +102,7 @@ if ($cours_sel) {
     if ($cours_info) {
         // Notes de tous les étudiants pour ce cours
         $stmt_notes = $db->prepare("
-            SELECT n.id as note_id, n.valeur_note, n.commentaire,
+            SELECT n.id as note_id, n.valeur_note, n.commentaire, n.type_note, n.est_validee,
                    u.id as etudiant_id, u.nom, u.prenom
             FROM utilisateurs u
             LEFT JOIN notes n ON n.etudiant_id = u.id AND n.cours_id = ?
@@ -334,6 +342,7 @@ $moy_globale = round((float) $stat_moy->fetchColumn(), 2);
                         <tr>
                             <th>Étudiant</th>
                             <th>Note / 20</th>
+                            <th>Type</th>
                             <th>Appréciation</th>
                             <th style="text-align:right;">Actions</th>
                         </tr>
@@ -357,21 +366,36 @@ $moy_globale = round((float) $stat_moy->fetchColumn(), 2);
                             <td>
                                 <span class="note-badge <?= $badgeCls ?>"><?= $badgeTxt ?></span>
                             </td>
+                            <td>
+                                <?php if($hasNote && !empty($n['type_note'])): ?>
+                                    <span style="font-size:12px; font-weight:600; padding:3px 10px; border-radius:7px; background:#e0e7ff; color:#4338ca;">
+                                        <?= htmlspecialchars($n['type_note']) ?>
+                                    </span>
+                                <?php else: ?>
+                                    <span style="color:var(--text-muted);">—</span>
+                                <?php endif; ?>
+                            </td>
                             <td style="font-size:13px; color:var(--text-muted); font-style:italic; max-width:220px;">
                                 <?= $hasNote && !empty($n['commentaire']) ? htmlspecialchars($n['commentaire']) : '—' ?>
                             </td>
                             <td style="text-align:right;">
                                 <?php if($hasNote): ?>
-                                    <button class="btn-edit"
-                                        onclick="ouvrirModale(<?= $n['note_id'] ?>, <?= $val ?>, '<?= htmlspecialchars(addslashes($n['commentaire'] ?? '')) ?>', '<?= htmlspecialchars($n['prenom'] . ' ' . $n['nom']) ?>')">
-                                        ✏️ Modifier
-                                    </button>
-                                    <form method="POST" style="display:inline;" onsubmit="return confirm('Supprimer cette note ?');">
-                                        <input type="hidden" name="action" value="supprimer_note">
-                                        <input type="hidden" name="note_id" value="<?= $n['note_id'] ?>">
-                                        <input type="hidden" name="cours_id" value="<?= $cours_sel ?>">
-                                        <button type="submit" class="btn-del">🗑️ Supprimer</button>
-                                    </form>
+                                    <?php if(!empty($n['est_validee'])): ?>
+                                        <span style="background:#d1fae5; color:#065f46; font-size:12px; font-weight:700; padding:5px 10px; border-radius:8px;">
+                                            ✅ Validée
+                                        </span>
+                                    <?php else: ?>
+                                        <button class="btn-edit"
+                                            onclick="ouvrirModale(<?= $n['note_id'] ?>, <?= $val ?>, '<?= htmlspecialchars(addslashes($n['commentaire'] ?? '')) ?>', '<?= htmlspecialchars($n['prenom'] . ' ' . $n['nom']) ?>', '<?= htmlspecialchars($n['type_note'] ?? 'DS') ?>')">
+                                            ✏️ Modifier
+                                        </button>
+                                        <form method="POST" style="display:inline;" onsubmit="return confirm('Supprimer cette note ?');">
+                                            <input type="hidden" name="action" value="supprimer_note">
+                                            <input type="hidden" name="note_id" value="<?= $n['note_id'] ?>">
+                                            <input type="hidden" name="cours_id" value="<?= $cours_sel ?>">
+                                            <button type="submit" class="btn-del">🗑️ Supprimer</button>
+                                        </form>
+                                    <?php endif; ?>
                                 <?php else: ?>
                                     <a href="dashboard_professeur.php" class="btn-edit" style="text-decoration:none;">+ Ajouter</a>
                                 <?php endif; ?>
@@ -409,6 +433,14 @@ $moy_globale = round((float) $stat_moy->fetchColumn(), 2);
                 <label>Note / 20</label>
                 <input type="number" name="valeur_note" id="modaleValeur" step="0.25" min="0" max="20" required>
 
+                <label>Type d'évaluation</label>
+                <select name="type_note" id="modaleTypeNote" required>
+                    <option value="DS">DS</option>
+                    <option value="Partiel">Partiel</option>
+                    <option value="Contrôle continu">Contrôle continu</option>
+                    <option value="Projet">Projet</option>
+                </select>
+
                 <label>Appréciation</label>
                 <textarea name="commentaire" id="modaleCommentaire" rows="3" placeholder="Commentaire..."></textarea>
 
@@ -423,10 +455,11 @@ $moy_globale = round((float) $stat_moy->fetchColumn(), 2);
     </div>
 
     <script>
-        function ouvrirModale(noteId, valeur, commentaire, nomEtudiant) {
-            document.getElementById('modaleNoteId').value     = noteId;
-            document.getElementById('modaleValeur').value     = valeur;
+        function ouvrirModale(noteId, valeur, commentaire, nomEtudiant, typeNote) {
+            document.getElementById('modaleNoteId').value      = noteId;
+            document.getElementById('modaleValeur').value      = valeur;
             document.getElementById('modaleCommentaire').value = commentaire;
+            document.getElementById('modaleTypeNote').value    = typeNote;
             document.getElementById('modaleTitre').textContent = 'Modifier la note — ' + nomEtudiant;
             document.getElementById('modaleEdit').classList.add('actif');
         }

@@ -20,14 +20,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $commentaire = trim($_POST['commentaire']);
 
     if ($valeur >= 0 && $valeur <= 20) {
-        $stmt = $db->prepare("
-            INSERT INTO notes (etudiant_id, cours_id, valeur_note, commentaire) 
-            VALUES (?, ?, ?, ?)
-        ");
-        if ($stmt->execute([$etudiant_id, $cours_id, $valeur, $commentaire])) {
-            $message_succes = "L'évaluation a été enregistrée avec succès.";
+        $type_note = $_POST['type_note'];
+        $types_autorises = ['DS', 'Partiel', 'Contrôle continu', 'Projet'];
+        if (!in_array($type_note, $types_autorises)) {
+            $message_erreur = "Type de note invalide.";
         } else {
-            $message_erreur = "Erreur lors de l'enregistrement de la note.";
+            $stmt = $db->prepare("
+                INSERT INTO notes (etudiant_id, cours_id, valeur_note, commentaire, type_note) 
+                VALUES (?, ?, ?, ?, ?)
+            ");
+            if ($stmt->execute([$etudiant_id, $cours_id, $valeur, $commentaire, $type_note])) {
+                $message_succes = "L'évaluation a été enregistrée avec succès.";
+            } else {
+                $message_erreur = "Erreur lors de l'enregistrement de la note.";
+            }
         }
     } else {
         $message_erreur = "La note doit impérativement être comprise entre 0 et 20.";
@@ -509,7 +515,14 @@ $nb_notes_donnees = count($historique_notes);
                                 </option>
                             <?php endforeach; ?>
                         </select>
-                        
+                        <label>Type d'évaluation</label>
+                        <select name="type_note" required>
+                            <option value="DS">DS</option>
+                            <option value="Partiel">Partiel</option>
+                            <option value="Contrôle continu">Contrôle continu</option>
+                            <option value="Projet">Projet</option>
+                        </select>
+
                         <label>Note / 20</label>
                         <input type="number" name="valeur_note" step="0.25" min="0" max="20" required placeholder="Ex: 15.5">
                         
@@ -537,6 +550,7 @@ $nb_notes_donnees = count($historique_notes);
                         <tr>
                             <th>Étudiant</th>
                             <th>Matière</th>
+                            <th>Type</th>
                             <th>Note</th>
                         </tr>
                         <?php foreach(array_slice($historique_notes, 0, 10) as $n): ?>
@@ -560,6 +574,7 @@ $nb_notes_donnees = count($historique_notes);
                                     </div>
                                 </td>
                                 <td><?= htmlspecialchars($n['cours_titre']) ?></td>
+                                <td><?= htmlspecialchars($n['type_note']) ?></td>
                                 <td><span class="badge badge-success"><?= number_format($n['valeur_note'], 2, ',', ' ') ?></span></td>
                             </tr>
                         <?php endforeach; ?>

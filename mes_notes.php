@@ -16,7 +16,7 @@ $matricule = "E2026" . str_pad($user_info['id'], 4, "0", STR_PAD_LEFT); // Gén�
 
 // 2. Récupération des notes triées par catégorie
 $stmt_notes = $db->prepare("
-    SELECT c.titre, c.categorie, n.valeur_note, n.commentaire 
+    SELECT c.titre, c.categorie, n.valeur_note, n.commentaire, n.type_note
     FROM notes n 
     JOIN cours c ON n.cours_id = c.id 
     WHERE n.etudiant_id = ?
@@ -101,6 +101,7 @@ if ($nombre_notes > 0) {
                     <tr>
                         <th style="width: 35%;">Matière</th>
                         <th style="width: 15%;">Note / 20</th>
+                        <th style="width: 13%;">Type</th>
                         <th style="width: 15%;">Résultat</th>
                         <th style="width: 35%;">Appréciation du jury / professeur</th>
                     </tr>
@@ -119,7 +120,16 @@ if ($nombre_notes > 0) {
                     ?>
                         <tr>
                             <td><strong><?= htmlspecialchars($note['titre']) ?></strong></td>
-                            <td><strong style="font-size: 15px; color: var(--text-main);"><?= htmlspecialchars($note['valeur_note']) ?></strong></td>
+                            <td style="width: 12%; padding-left: 40px;"><strong style="font-size: 15px; color: var(--text-main);"><?= htmlspecialchars($note['valeur_note']) ?></strong></td>
+                            <td>
+                                <?php if (!empty($note['type_note'])): ?>
+                                    <span style="font-size:11px; font-weight:600; padding:3px 9px; border-radius:7px; background:#e0e7ff; color:#4338ca;">
+                                        <?= htmlspecialchars($note['type_note']) ?>
+                                    </span>
+                                <?php else: ?>
+                                    <span style="color:var(--text-muted);">—</span>
+                                <?php endif; ?>
+                            </td>
                             <td><span class="badge <?= $badge_class ?>"><?= $resultat_texte ?></span></td>
                             <td style="font-style: italic; color: var(--text-muted); font-size: 13px;">
                                 <?= !empty($note['commentaire']) ? htmlspecialchars($note['commentaire']) : '-' ?>

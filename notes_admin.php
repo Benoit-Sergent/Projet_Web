@@ -7,6 +7,18 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'administrateur') {
 require_once 'db.php';
 
 // ==========================================
+// VALIDATION D'UNE NOTE (admin)
+// ==========================================
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['valider_note_id'])) {
+    $note_id = intval($_POST['valider_note_id']);
+    $stmt_val = $db->prepare("UPDATE notes SET est_validee = 1 WHERE id = ?");
+    $stmt_val->execute([$note_id]);
+    // Redirige pour éviter la re-soumission du formulaire
+    header("Location: " . $_SERVER['PHP_SELF'] . "?" . http_build_query($_GET));
+    exit();
+}
+
+// ==========================================
 // CHARGEMENT DES DONNÉES
 // ==========================================
 
@@ -55,7 +67,7 @@ if ($cours_sel && $groupe_sel) {
 
     if ($cours_info) {
         $stmt_notes = $db->prepare("
-            SELECT n.id AS note_id, n.valeur_note, n.commentaire,
+            SELECT n.id AS note_id, n.valeur_note, n.commentaire, n.est_validee,
                    u.id AS etudiant_id, u.nom, u.prenom
             FROM utilisateurs u
             LEFT JOIN notes n ON n.etudiant_id = u.id AND n.cours_id = ?
@@ -495,6 +507,7 @@ if ($groupe_sel && $groupe_info) {
                             <th>Étudiant</th>
                             <th>Note / 20</th>
                             <th>Appréciation</th>
+                            <th>Validation</th>
                         </tr>
                         <?php foreach($notes_cours as $i => $n):
                             $init = strtoupper(substr($n['prenom'], 0, 1) . substr($n['nom'], 0, 1));
@@ -523,6 +536,29 @@ if ($groupe_sel && $groupe_info) {
                             </td>
                             <td style="font-size:13px; color:var(--text-muted); font-style:italic; max-width:260px;">
                                 <?= $hasNote && !empty($n['commentaire']) ? htmlspecialchars($n['commentaire']) : '—' ?>
+                            </td>
+                            <td>
+                                <?php if ($hasNote): ?>
+                                    <?php if ($n['est_validee']): ?>
+                                        <span style="color:#065f46; font-weight:700; font-size:13px;">
+                                            ✅ Validée
+                                        </span>
+                                    <?php else: ?>
+                                        <form method="POST" style="display:inline;">
+                                            <?php foreach ($_GET as $k => $v): ?>
+                                                <input type="hidden" name="<?= htmlspecialchars($k) ?>" value="<?= htmlspecialchars($v) ?>">
+                                            <?php endforeach; ?>
+                                            <input type="hidden" name="valider_note_id" value="<?= $n['note_id'] ?>">
+                                            <button type="submit"
+                                                    onclick="return confirm('Valider la note de <?= htmlspecialchars($n['prenom'] . ' ' . $n['nom']) ?> ?')"
+                                                    style="background:#d1fae5; color:#065f46; border:none; padding:4px 12px; border-radius:8px; font-weight:700; cursor:pointer; font-size:13px;">
+                                                Valider
+                                            </button>
+                                        </form>
+                                    <?php endif; ?>
+                                <?php else: ?>
+                                    <span style="color:#9ca3af; font-size:13px;">—</span>
+                                <?php endif; ?>
                             </td>
                         </tr>
                         <?php endforeach; ?>

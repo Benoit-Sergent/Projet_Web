@@ -211,6 +211,8 @@ input:focus, select:focus, textarea:focus {
     transition: var(--transition);
     display: inline-flex; align-items: center; justify-content: center;
 }
+.btn-panel-danger { background: #ef4444; color: #fff; }
+.btn-panel-danger:hover { background: #dc2626; }
 
 .btn-action:hover { background: var(--primary-hover); transform: translateY(-1px); box-shadow: var(--shadow-md); }
 
@@ -235,6 +237,7 @@ tr:hover td { background-color: var(--bg-body); }
     margin-left: 8px; display: inline-block;
     box-shadow: 0 0 0 2px var(--surface);
 }
+
 
 /* =========================================
    8. NOTIFICATIONS TOAST (ALERTES)

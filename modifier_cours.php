@@ -1,7 +1,7 @@
 <?php
 /**
  * modifier_cours.php
- * Endpoint AJAX — met à jour les informations d'un cours.
+ * Endpoint AJAX — met à jour ou supprime un cours.
  * Accessible uniquement par les administrateurs.
  */
 session_start();
@@ -21,22 +21,48 @@ if (!$data || !is_array($data)) {
     exit();
 }
 
-// ── Récupération et validation ────────────────────────────────────────────────
-$id          = intval($data['id']           ?? 0);
-$titre       = trim($data['titre']          ?? '');
-$categorie   = trim($data['categorie']      ?? '');
-$prof_id     = intval($data['professeur_id'] ?? 0);
-$groupe_id   = intval($data['groupe_id']    ?? 0);
-$jour        = trim($data['jour']           ?? '');
-$heure_debut = trim($data['heure_debut']    ?? '');
-$heure_fin   = trim($data['heure_fin']      ?? '');
-$salle       = trim($data['salle']          ?? '');
+$action = trim($data['action'] ?? 'modifier');
+$id     = intval($data['id']   ?? 0);
 
-if ($id <= 0)                    { echo json_encode(['error' => 'Identifiant invalide.']);              exit(); }
-if (empty($titre))               { echo json_encode(['error' => 'Le titre est obligatoire.']);          exit(); }
-if ($prof_id <= 0)               { echo json_encode(['error' => 'Professeur invalide.']);               exit(); }
-if ($groupe_id <= 0)             { echo json_encode(['error' => 'Classe invalide.']);                   exit(); }
-if (empty($heure_debut) || empty($heure_fin)) { echo json_encode(['error' => 'Horaires invalides.']); exit(); }
+if ($id <= 0) {
+    echo json_encode(['error' => 'Identifiant invalide.']);
+    exit();
+}
+
+// ── Vérification existence ────────────────────────────────────────────────────
+$check = $db->prepare("SELECT COUNT(*) FROM cours WHERE id = ?");
+$check->execute([$id]);
+if ((int) $check->fetchColumn() === 0) {
+    echo json_encode(['error' => 'Cours introuvable.']);
+    exit();
+}
+
+// ── Action : SUPPRIMER ────────────────────────────────────────────────────────
+if ($action === 'supprimer') {
+    try {
+        $stmt = $db->prepare("DELETE FROM cours WHERE id = ?");
+        $stmt->execute([$id]);
+        echo json_encode(['success' => true]);
+    } catch (PDOException $e) {
+        echo json_encode(['error' => 'Erreur lors de la suppression. Veuillez réessayer.']);
+    }
+    exit();
+}
+
+// ── Action : MODIFIER (défaut) ────────────────────────────────────────────────
+$titre       = trim($data['titre']           ?? '');
+$categorie   = trim($data['categorie']       ?? '');
+$prof_id     = intval($data['professeur_id'] ?? 0);
+$groupe_id   = intval($data['groupe_id']     ?? 0);
+$jour        = trim($data['jour']            ?? '');
+$heure_debut = trim($data['heure_debut']     ?? '');
+$heure_fin   = trim($data['heure_fin']       ?? '');
+$salle       = trim($data['salle']           ?? '');
+
+if (empty($titre))                            { echo json_encode(['error' => 'Le titre est obligatoire.']);          exit(); }
+if ($prof_id <= 0)                            { echo json_encode(['error' => 'Professeur invalide.']);               exit(); }
+if ($groupe_id <= 0)                          { echo json_encode(['error' => 'Classe invalide.']);                   exit(); }
+if (empty($heure_debut) || empty($heure_fin)) { echo json_encode(['error' => 'Horaires invalides.']);               exit(); }
 
 $categories_autorisees = ['Sciences', 'Informatique', 'Langues', 'Management'];
 if (!in_array($categorie, $categories_autorisees, true)) {
@@ -50,26 +76,17 @@ if (!in_array($jour, $jours_autorises, true)) {
     exit();
 }
 
-// ── Mise à jour ───────────────────────────────────────────────────────────────
 try {
-    // Vérifie que le cours existe
-    $check = $db->prepare("SELECT COUNT(*) FROM cours WHERE id = ?");
-    $check->execute([$id]);
-    if ((int) $check->fetchColumn() === 0) {
-        echo json_encode(['error' => 'Cours introuvable.']);
-        exit();
-    }
-
     $stmt = $db->prepare("
         UPDATE cours
-        SET titre        = ?,
-            categorie    = ?,
+        SET titre         = ?,
+            categorie     = ?,
             professeur_id = ?,
-            groupe_id    = ?,
-            jour         = ?,
-            heure_debut  = ?,
-            heure_fin    = ?,
-            salle        = ?
+            groupe_id     = ?,
+            jour          = ?,
+            heure_debut   = ?,
+            heure_fin     = ?,
+            salle         = ?
         WHERE id = ?
     ");
     $stmt->execute([$titre, $categorie, $prof_id, $groupe_id, $jour, $heure_debut, $heure_fin, $salle, $id]);

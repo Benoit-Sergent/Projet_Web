@@ -195,6 +195,19 @@ $nb_categories = count(array_filter($categories));
         }
         .btn-cours-ghost:hover { background: #e9eaf0; }
 
+        /* ===== Lien groupe ===== */
+        .groupe-link {
+            color: var(--primary, #4f46e5);
+            font-weight: 700;
+            text-decoration: none;
+            border-bottom: 1.5px solid transparent;
+            transition: border-color 0.18s, color 0.18s;
+        }
+        .groupe-link:hover {
+            border-bottom-color: var(--primary, #4f46e5);
+            color: #3730a3;
+        }
+
         /* ===== État vide ===== */
         .empty-state {
             text-align: center;
@@ -304,12 +317,15 @@ $nb_categories = count(array_filter($categories));
                             <h3 class="cours-title"><?= htmlspecialchars($cours['titre']) ?></h3>
 
                             <div class="cours-meta">
-                                <!-- Groupe/Classe -->
+                                <!-- Groupe/Classe — rendu cliquable -->
                                 <div class="cours-meta-item">
                                     <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0" />
                                     </svg>
-                                    Classe : <strong style="color:var(--text-main);"><?= htmlspecialchars($cours['groupe_nom']) ?></strong>
+                                    Classe :&nbsp;
+                                    <a href="detail_groupe.php?id=<?= $cours['groupe_id'] ?>" class="groupe-link">
+                                        <?= htmlspecialchars($cours['groupe_nom']) ?>
+                                    </a>
                                 </div>
                                 <!-- Horaire -->
                                 <?php if (!empty($cours['jour'])): ?>

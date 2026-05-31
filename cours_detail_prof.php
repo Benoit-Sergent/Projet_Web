@@ -92,7 +92,7 @@ $documents_simules = [
     <?php include 'menu.php'; ?>
 
     <div class="container">
-        <a href="mes_cours.php" class="back-link">← Retour au catalogue des cours</a>
+        <a href="mes_cours_prof.php" class="back-link">← Retour au catalogue des cours</a>
 
         <div class="course-banner">
             <span class="badge"><?= htmlspecialchars($cours['categorie']) ?></span>
@@ -130,8 +130,6 @@ $documents_simules = [
 
         </div>
     </div>
-    </div>
-        <?php include 'footer.php'; ?> 
-    </body>
+    <?php include 'footer.php'; ?> 
 </body>
 </html>
