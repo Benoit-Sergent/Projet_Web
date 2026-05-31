@@ -8,7 +8,7 @@ session_start();
 header('Content-Type: application/json; charset=utf-8');
 
 // Vérification de session
-if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'administrateur') {
+if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], ['administrateur', 'professeur'])) {
     http_response_code(403);
     echo json_encode(['error' => 'Accès non autorisé.']);
     exit();

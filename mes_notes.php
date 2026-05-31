@@ -59,26 +59,7 @@ if ($nombre_notes > 0) {
     </style>
 </head>
 <body>
-    <header class="top-bar">
-        <img src="images/logo.jpg" alt="Logo HEJ" onerror="this.src='https://via.placeholder.com/120x45?text=SmartCampus'">
-        <div class="user-widget">
-            <div class="user-widget-info" style="text-align: right;">
-                <strong><?= htmlspecialchars($user_info['prenom'] . ' ' . $user_info['nom']) ?></strong>
-                <span>Étudiant</span>
-            </div>
-            <div class="avatar-small"><?= $initiales ?></div>
-            <a href="deconnexion.php" style="margin-left: 15px; color: var(--danger); text-decoration: none; font-size: 13px; font-weight: 600;">Déconnexion</a>
-        </div>
-    </header>
-
-    <nav class="top-nav">
-        <a href="dashboard_etudiant.php">Dashboard</a>
-        <a href="profil.php">Profil</a>
-        <a href="mes_cours.php">Mes Cours</a>
-        <a href="mes_notes.php" class="active">Notes</a>
-        <a href="presences.php">Présences</a>
-        <a href="planning.php">Emploi du temps</a>
-    </nav>
+    <?php include 'menu.php'; ?>
 
     <div class="container">
         <div class="print-header">

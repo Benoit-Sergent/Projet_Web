@@ -6,10 +6,9 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'etudiant') {
 }
 require_once 'db.php';
 
-$stmt_user = $db->prepare("SELECT prenom, nom, groupe_id FROM utilisateurs WHERE id = ?");
+$stmt_user = $db->prepare("SELECT groupe_id FROM utilisateurs WHERE id = ?");
 $stmt_user->execute([$_SESSION['utilisateur_id']]);
 $user = $stmt_user->fetch(PDO::FETCH_ASSOC);
-$initiales = strtoupper(substr($user['prenom'], 0, 1) . substr($user['nom'], 0, 1));
 
 // On ne charge QUE les cours attribués au groupe de cet étudiant
 $liste_cours = [];
@@ -33,25 +32,7 @@ if ($user['groupe_id']) {
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <header class="top-bar">
-        <img src="images/logo.jpg" alt="Logo HEJ" onerror="this.src='https://via.placeholder.com/120x45?text=SmartCampus'">
-        <div class="user-widget">
-            <div class="user-widget-info" style="text-align: right;">
-                <strong><?= htmlspecialchars($user['prenom'] . ' ' . $user['nom']) ?></strong>
-                <span>Étudiant</span>
-            </div>
-            <div class="avatar-small"><?= $initiales ?></div>
-        </div>
-    </header>
-
-    <nav class="top-nav">
-        <a href="dashboard_etudiant.php">Dashboard</a>
-        <a href="profil.php">Profil</a>
-        <a href="mes_cours.php" class="active">Mes Cours</a>
-        <a href="mes_notes.php">Notes</a>
-        <a href="presences.php">Présences</a>
-        <a href="planning.php">Emploi du temps</a>
-    </nav>
+    <?php include 'menu.php'; ?>
 
     <div class="container">
         <div style="margin-bottom: 30px;">
@@ -78,7 +59,7 @@ if ($user['groupe_id']) {
                                 <?php if(empty($cours['description'])) echo "<em>Aucune description fournie.</em>"; ?>
                             </p>
                         </div>
-                        <a href="detail_cours.php?id=<?= $cours['id'] ?>" class="btn-action" style="width: 100%;">Accéder au cours</a>
+                        <a href="detail_cours.php?id=<?= $cours['id'] ?>" class="btn-action" style="width: 100%; box-sizing: border-box; display: block; text-align: center;">Accéder au cours</a>
                     </div>
                 <?php endforeach; ?>
             </div>

@@ -29,12 +29,6 @@ $stmt_note = $db->prepare("SELECT valeur_note, commentaire FROM notes WHERE cour
 $stmt_note->execute([$cours_id, $_SESSION['utilisateur_id']]);
 $evaluation = $stmt_note->fetch(PDO::FETCH_ASSOC);
 
-// 3. Infos de l'utilisateur pour le header
-$stmt_info = $db->prepare("SELECT prenom, nom FROM utilisateurs WHERE id = ?");
-$stmt_info->execute([$_SESSION['utilisateur_id']]);
-$user_info = $stmt_info->fetch(PDO::FETCH_ASSOC);
-$initiales = strtoupper(substr($user_info['prenom'], 0, 1) . substr($user_info['nom'], 0, 1));
-
 // (Optionnel) Simulation de documents rattachés au cours
 $documents_simules = [
     ['titre' => 'Syllabus du cours.pdf', 'taille' => '1.2 MB', 'type' => 'PDF'],
@@ -61,15 +55,16 @@ $documents_simules = [
         .back-link:hover { color: var(--primary); }
         
         .course-banner {
-            background: var(--primary-grad);
+            background: var(--primary);
             border-radius: 16px;
             padding: 40px;
             color: white;
             margin-bottom: 30px;
             box-shadow: var(--shadow-soft);
         }
-        .course-banner h1 { margin: 0 0 10px 0; color: white; font-size: 32px; }
-        .course-banner .badge { background: rgba(255,255,255,0.2); color: white; backdrop-filter: blur(5px); }
+        .course-banner h1 { margin: 0 0 10px 0; color: white; font-size: 32px; text-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+        .course-banner p { color: rgba(255,255,255,0.9); text-shadow: 0 1px 2px rgba(0,0,0,0.15); }
+        .course-banner .badge { background: rgba(0,0,0,0.2); color: white; backdrop-filter: blur(5px); }
 
         .doc-item {
             display: flex;
@@ -99,25 +94,7 @@ $documents_simules = [
     </style>
 </head>
 <body>
-    <header class="top-bar">
-        <img src="images/logo.jpg" alt="Logo HEJ" onerror="this.src='https://via.placeholder.com/120x45?text=SmartCampus'">
-        <div class="user-widget">
-            <div class="user-widget-info" style="text-align: right;">
-                <strong><?= htmlspecialchars($user_info['prenom'] . ' ' . $user_info['nom']) ?></strong>
-                <span>Étudiant</span>
-            </div>
-            <div class="avatar-small"><?= $initiales ?></div>
-        </div>
-    </header>
-
-    <nav class="top-nav">
-        <a href="dashboard_etudiant.php">Dashboard</a>
-        <a href="profil.php">Profil</a>
-        <a href="mes_cours.php" class="active">Mes Cours</a>
-        <a href="mes_notes.php">Notes</a>
-        <a href="presences.php">Présences</a>
-        <a href="planning.php">Emploi du temps</a>
-    </nav>
+    <?php include 'menu.php'; ?>
 
     <div class="container">
         <a href="mes_cours.php" class="back-link">← Retour au catalogue des cours</a>
@@ -185,5 +162,8 @@ $documents_simules = [
 
         </div>
     </div>
+    </div>
+        <?php include 'footer.php'; ?> 
+    </body>
 </body>
 </html>
