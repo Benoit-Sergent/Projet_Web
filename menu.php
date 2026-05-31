@@ -26,8 +26,14 @@ $current_page = basename($_SERVER['PHP_SELF']);
 
 <header class="top-bar">
     <img src="images/logo.jpg" alt="SmartCampus" onerror="this.src='https://via.placeholder.com/120x45?text=SmartCampus'">
-    <div class="user-widget">
-        <div class="user-widget-info" style="text-align: right;">
+   <div class="user-widget">
+    <button id="theme-toggle" style="background: transparent; border: none; cursor: pointer; color: var(--text-muted); padding: 5px; display: flex; align-items: center;" title="Changer le thème">
+        <svg id="theme-icon" width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+        </svg>
+    </button>
+
+    <div class="user-widget-info" style="text-align: right;">
             <strong style="color:var(--text-main); font-size:14px;"><?= htmlspecialchars($user_menu['prenom'] . ' ' . $user_menu['nom']) ?></strong>
             <span style="font-size:12px; color:var(--text-muted);">
                 <?php 
@@ -105,4 +111,42 @@ $current_page = basename($_SERVER['PHP_SELF']);
     <a href="deconnexion.php" style="color: var(--danger); margin-left: auto;">
         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg> Quitter
     </a>
+	<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const themeToggleBtn = document.getElementById('theme-toggle');
+    const themeIcon = document.getElementById('theme-icon');
+    
+    // Vérifie si un thème est déjà sauvegardé dans le navigateur
+    const currentTheme = localStorage.getItem('smartcampus_theme') || 'light';
+    
+    // Applique le thème au chargement
+    if (currentTheme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        setSunIcon();
+    }
+
+    // Événement au clic sur le bouton
+    themeToggleBtn.addEventListener('click', () => {
+        let theme = document.documentElement.getAttribute('data-theme');
+        
+        if (theme === 'dark') {
+            document.documentElement.removeAttribute('data-theme');
+            localStorage.setItem('smartcampus_theme', 'light');
+            setMoonIcon();
+        } else {
+            document.documentElement.setAttribute('data-theme', 'dark');
+            localStorage.setItem('smartcampus_theme', 'dark');
+            setSunIcon();
+        }
+    });
+
+    function setSunIcon() {
+        themeIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />';
+    }
+
+    function setMoonIcon() {
+        themeIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />';
+    }
+});
+</script>
 </nav>
