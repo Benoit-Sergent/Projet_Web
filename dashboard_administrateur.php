@@ -713,7 +713,7 @@ $nb_classes = count($groupes);
 
             // Met à jour le compteur
             const label = visible > 1 ? 'membres' : 'membre';
-            document.getElementById('annuaireCompteur').textContent = ${visible} ${label};
+            document.getElementById('annuaireCompteur').textContent = `${visible} ${label}`;
         }
 
         /* ======================================================
@@ -747,12 +747,12 @@ $nb_classes = count($groupes);
             document.getElementById('panelNomComplet').textContent = '—';
             document.getElementById('panelBadgeRole').innerHTML    = '';
 
-            fetch(get_profil.php?id=${id})
+            fetch(`get_profil.php?id=${id}`)
                 .then(r => r.json())
                 .then(data => {
                     if (data.error) {
                         document.getElementById('panelLoader').innerHTML =
-                            <span style="color:var(--danger);">⚠️ ${data.error}</span>;
+                            `<span style="color:var(--danger);">⚠️ ${data.error}</span>`;
                         return;
                     }
                     panelData = data;
@@ -778,11 +778,11 @@ $nb_classes = count($groupes);
             const initiales = (u.prenom.charAt(0) + u.nom.charAt(0)).toUpperCase();
             const avatar = document.getElementById('panelAvatar');
             avatar.textContent = initiales;
-            avatar.className   = panel-avatar avatar-${u.role};
+            avatar.className = `panel-avatar avatar-${u.role}`;
 
-            document.getElementById('panelNomComplet').textContent = ${u.prenom} ${u.nom};
+            document.getElementById('panelNomComplet').textContent = `${u.prenom} ${u.nom}`;
             document.getElementById('panelBadgeRole').innerHTML =
-                <span class="badge ${ROLES_BADGES[u.role] || 'badge-neutral'}">${ROLES_LABELS[u.role] || u.role}</span>;
+                `<span class="badge ${ROLES_BADGES[u.role] || 'badge-neutral'}">${ROLES_LABELS[u.role] || u.role}</span>`;
 
             document.getElementById('dispPrenom').textContent = u.prenom;
             document.getElementById('dispNom').textContent    = u.nom;
@@ -859,7 +859,7 @@ $nb_classes = count($groupes);
 
             // Détail par cours
             if (data.notes_par_cours && data.notes_par_cours.length > 0) {
-                html += <div class="hist-title" style="margin-top:4px;">Détail par cours</div><div>;
+                html += '<div class="hist-title" style="margin-top:4px;">Détail par cours</div><div>';
                 data.notes_par_cours.forEach(c => {
                     const m = parseFloat(c.moyenne);
                     const couleur = m >= 14 ? '#065f46' : m >= 10 ? '#92400e' : '#991b1b';
@@ -876,13 +876,13 @@ $nb_classes = count($groupes);
                         </span>
                     </div>`;
                 });
-                html += </div>;
+                html += `</div>`;
             }
 
             // Parcours académique
-            html += <div class="hist-title" style="margin-top:20px;">Parcours académique</div>;
+            html += `<div class="hist-title" style="margin-top:20px;">Parcours académique</div>`;
             if (data.parcours && data.parcours.length > 0) {
-                html += <div>;
+                html += `<div>`;
                 data.parcours.forEach(p => {
                     const styleActuelle = p.actuelle ? 'font-weight:700; color:var(--primary);' : '';
                     const dotStyle      = p.actuelle ? 'background:var(--primary);' : 'background:#d1d5db;';
@@ -895,9 +895,9 @@ $nb_classes = count($groupes);
                         </div>
                     </div>`;
                 });
-                html += </div>;
+                html += `</div>`;
             } else {
-                html += <p class="hist-empty">Aucun parcours disponible.</p>;
+                html += `<p class="hist-empty">Aucun parcours disponible.</p>`;
             }
 
             document.getElementById('panelParcours').innerHTML = html;
@@ -908,7 +908,7 @@ $nb_classes = count($groupes);
             const el = document.getElementById('panelCours');
 
             if (!data.cours_enseignes || data.cours_enseignes.length === 0) {
-                el.innerHTML = <p class="hist-empty">Aucun cours assigné pour le moment.</p>;
+                el.innerHTML = `<p class="hist-empty">Aucun cours assigné pour le moment.</p>`;
                 return;
             }
 
@@ -958,7 +958,7 @@ $nb_classes = count($groupes);
                 </div>`;
             });
 
-            html += </div>;
+            html += `</div>`;
             el.innerHTML = html;
         }
 
@@ -1045,7 +1045,7 @@ $nb_classes = count($groupes);
 
         /** Met à jour la ligne du tableau sans recharger la page */
         function actualiserLigneTableau(payload) {
-            const row = document.querySelector(tr[data-user-id="${currentUserId}"]);
+            const row = document.querySelector(`tr[data-user-id="${currentUserId}"]`);
             if (!row) return;
 
             const groupe = panelData.groupes.find(g => String(g.id) === String(payload.groupe_id));
@@ -1059,10 +1059,10 @@ $nb_classes = count($groupes);
                 <span style="font-size:12px;color:var(--text-muted);">${escHtml(payload.email)}</span>`;
 
             row.cells[1].innerHTML =
-                <span class="badge ${ROLES_BADGES[payload.role] || 'badge-neutral'}">${ROLES_LABELS[payload.role] || payload.role}</span>;
+                `<span class="badge ${ROLES_BADGES[payload.role] || 'badge-neutral'}">${ROLES_LABELS[payload.role] || payload.role}</span>`;
 
             row.cells[2].innerHTML = groupe
-                ? <span style="color:var(--primary);font-weight:600;">${escHtml(groupe.nom)}</span>
+                ? `<span style="color:var(--primary);font-weight:600;">${escHtml(groupe.nom)}</span>`
                 : '—';
 
             // Ré-applique les filtres en cours pour masquer la ligne si elle ne correspond plus
@@ -1073,7 +1073,7 @@ $nb_classes = count($groupes);
         function afficherToast(message, type = 'success') {
             const t = document.getElementById('panelToast');
             t.textContent = message;
-            t.className   = panel-toast ${type} show;
+            t.className = `panel-toast ${type} show`;
             setTimeout(() => { t.classList.remove('show'); }, 3200);
         }
 
@@ -1126,11 +1126,7 @@ $nb_classes = count($groupes);
 
             clearTimeout(emailCheckTimer);
             emailCheckTimer = setTimeout(() => {
-<<<<<<< HEAD
                 fetch(`verifier_email.php?email=${encodeURIComponent(email)}`)
-=======
-                fetch(verifier_email.php?email=${encodeURIComponent(email)})
->>>>>>> 170b93b1dfb9228b86c0b8865d6bd6888586def5
                     .then(r => r.json())
                     .then(data => {
                         if (data.existe) {
@@ -1163,7 +1159,6 @@ $nb_classes = count($groupes);
 
         /* Bloque la soumission côté client si l'email est déjà pris */
         document.querySelector('form[action="traitement_inscription.php"]')
-<<<<<<< HEAD
         .addEventListener('submit', function(e) {
             if (!emailEstValide) {
                 e.preventDefault();
@@ -1179,14 +1174,6 @@ $nb_classes = count($groupes);
                 }
             }
         });
-=======
-            .addEventListener('submit', function(e) {
-                if (!emailEstValide) {
-                    e.preventDefault();
-                    afficherToast('⛔ Cet email est déjà associé à un compte existant.', 'error');
-                }
-            });
->>>>>>> 170b93b1dfb9228b86c0b8865d6bd6888586def5
     </script>
 
     <?php include 'footer.php'; ?>
