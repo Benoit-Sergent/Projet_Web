@@ -283,7 +283,6 @@ $nb_classes = count($groupes);
 
         input.email-libre { border-color: #10b981 !important; }
         input.email-pris  { border-color: #ef4444 !important; }
-<<<<<<< HEAD
 
         /* === CAPACITÉ DE CLASSE === */
         .capacite-info {
@@ -306,8 +305,6 @@ $nb_classes = count($groupes);
         .cap-libre   { background: #10b981; }
         .cap-presque { background: #f59e0b; }
         .cap-plein   { background: #ef4444; }
-=======
->>>>>>> 170b93b1dfb9228b86c0b8865d6bd6888586def5
     </style>
 </head>
 <body>
